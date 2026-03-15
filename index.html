@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Albion Market Analyzer</title>
+<title>アルビオン市場分析ツール</title>
 
 <style>
 
@@ -50,25 +50,25 @@ font-size:18px;
 
 <body>
 
-<h1>Albion AI Market Analyzer</h1>
+<h1>アルビオン市場分析ツール</h1>
 
 <select id="server">
-<option value="west">Americas</option>
-<option value="europe">Europe</option>
-<option value="east">Asia</option>
+<option value="west">アメリカサーバー</option>
+<option value="europe">ヨーロッパサーバー</option>
+<option value="east">アジアサーバー</option>
 </select>
 
 <input id="item" value="T4_BAG">
 
-<button onclick="loadPrices()">Search</button>
+<button onclick="loadPrices()">検索</button>
 
 <div class="result" id="best"></div>
 
 <table id="table">
 <tr>
-<th>City</th>
-<th>Sell</th>
-<th>Buy</th>
+<th>都市</th>
+<th>最安売り</th>
+<th>最高買い</th>
 </tr>
 </table>
 
@@ -105,7 +105,7 @@ cities[d.city].buy=d.buy_price_max;
 
 let table=document.getElementById("table");
 
-table.innerHTML="<tr><th>City</th><th>Sell</th><th>Buy</th></tr>";
+table.innerHTML="<tr><th>都市</th><th>最安売却</th><th>最高販売</th></tr>";
 
 let cheapestCity="";
 let cheapest=999999999;
@@ -141,9 +141,9 @@ bestCity=city;
 let profit=best-cheapest;
 
 document.getElementById("best").innerHTML=
-"最安購入: "+cheapestCity+" "+cheapest+
-"<br>最高売却: "+bestCity+" "+best+
-"<br>輸送利益: "+profit+" silver";
+"最安購入都市: "+cheapestCity+" "+cheapest+
+"<br>最高売却都市: "+bestCity+" "+best+
+"<br>輸送利益: "+profit+" シルバー";
 
 }
 

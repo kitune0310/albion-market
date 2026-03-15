@@ -1,31 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Albion AI Market Tool</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>Albion AI Market Analyzer</title>
 <style>
-
 body{
-background:#0d0d0d;
+background:#0a0a0a;
 color:white;
-font-family:Arial;
+font-family:sans-serif;
 text-align:center;
-}
-
-h1{
-color:#ffd700;
-margin-top:30px;
 }
 
 input{
 padding:10px;
-font-size:16px;
-width:240px;
+font-size:18px;
 }
 
 button{
 padding:10px;
-cursor:pointer;
+font-size:18px;
+margin-left:10px;
 }
 
 table{
@@ -38,167 +31,55 @@ td,th{
 border:1px solid #444;
 padding:10px;
 }
-
-canvas{
-max-width:700px;
-margin-top:30px;
-}
-
-#profit{
-font-size:22px;
-margin-top:20px;
-color:#00ff9d;
-}
-
-#ai{
-margin-top:20px;
-font-size:18px;
-color:#00d9ff;
-}
-
 </style>
 </head>
+
 <body>
+
 <h1>Albion AI Market Analyzer</h1>
-<input id="item" placeholder="例: T4_BAG">
+
+<input id="item" value="T4_BAG">
 <button onclick="loadPrices()">Search</button>
-<h2>City Prices</h2>
-<table id="prices">
+
+<table id="table">
 <tr>
 <th>City</th>
 <th>Sell</th>
 <th>Buy</th>
 </tr>
 </table>
-<div id="profit"></div>
-<div id="ai"></div>
+
 <script>
 
-const cities=[
-"Caerleon",
-"Bridgewatch",
-"Martlock",
-"Lymhurst",
-"FortSterling",
-"Thetford"
-];
+async function loadPrices(){
 
-let chart;
+let item=document.getElementById("item").value;
 
-async function search(){
+let url="https://west.albion-online-data.com/api/v2/stats/prices/"+item+".json";
 
-const item=document.getElementById("item").value;
+let res=await fetch(url);
 
-const url=`https://west.albion-online-data.com/api/v2/stats/prices/${item}.json?locations=${cities.join(",")}`;
+let data=await res.json();
 
-const res=await fetch(url);
+let table=document.getElementById("table");
 
-const data=await res.json();
+table.innerHTML="<tr><th>City</th><th>Sell</th><th>Buy</th></tr>";
 
-const table=document.getElementById("prices");
-
-table.innerHTML=`
-<tr>
-<th>City</th>
-<th>Sell</th>
-<th>Buy</th>
-</tr>
-`;
-
-let prices=[];
-
-let min=null;
-let max=null;
-
-data.forEach(p=>{
+data.forEach(d=>{
 
 table.innerHTML+=`
 <tr>
-<td>${p.city}</td>
-<td>${p.sell_price_min}</td>
-<td>${p.buy_price_max}</td>
+<td>${d.city}</td>
+<td>${d.sell_price_min}</td>
+<td>${d.buy_price_max}</td>
 </tr>
 `;
-
-prices.push(p.sell_price_min);
-
-if(!min || p.sell_price_min<min.sell_price_min)min=p;
-
-if(!max || p.sell_price_min>max.sell_price_min)max=p;
-
-});
-
-if(min && max){
-
-const profit=max.sell_price_min-min.sell_price_min;
-
-document.getElementById("profit").innerHTML=
-`Profit: Buy in ${min.city} → Sell in ${max.city} = ${profit}`;
-
-runAI(min,max,profit);
-
-}
-
-drawChart(prices);
-
-}
-
-function runAI(min,max,profit){
-
-let message="";
-
-if(profit>10000){
-
-message="AI: Excellent trade route. High profit transport recommended.";
-
-}
-
-else if(profit>3000){
-
-message="AI: Good trade opportunity.";
-
-}
-
-else{
-
-message="AI: Low profit. Consider another item.";
-
-}
-
-document.getElementById("ai").innerHTML=
-message + "<br>Route: "+min.city+" → "+max.city;
-
-}
-
-function drawChart(prices){
-
-const ctx=document.getElementById("chart");
-
-if(chart)chart.destroy();
-
-chart=new Chart(ctx,{
-
-type:"bar",
-
-data:{
-
-labels:cities,
-
-datasets:[{
-
-label:"Price",
-
-data:prices
-
-}]
-
-}
 
 });
 
 }
 
 </script>
+
 </body>
 </html>
-:::

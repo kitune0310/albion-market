@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <title>アルビオン市場分析ツール</title>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
+
 body{
 background:#0a0a0a;
 color:white;
@@ -12,7 +15,9 @@ font-family:sans-serif;
 text-align:center;
 }
 
-h1{color:#ffd700;}
+h1{
+color:#ffd700;
+}
 
 input,select{
 padding:10px;
@@ -36,6 +41,17 @@ td,th{
 border:1px solid #444;
 padding:10px;
 }
+
+.result{
+margin-top:20px;
+font-size:18px;
+}
+
+canvas{
+max-width:800px;
+margin-top:40px;
+}
+
 </style>
 </head>
 
@@ -44,14 +60,16 @@ padding:10px;
 <h1>アルビオン市場分析ツール</h1>
 
 <select id="server">
-<option value="west">アメリカ</option>
-<option value="europe">ヨーロッパ</option>
-<option value="east">アジア</option>
+<option value="west">アメリカサーバー</option>
+<option value="europe">ヨーロッパサーバー</option>
+<option value="east">アジアサーバー</option>
 </select>
 
-<input id="item" placeholder="バッグ など">
+<input id="item" value="T4_BAG">
 
 <button onclick="loadPrices()">検索</button>
+
+<div class="result" id="best"></div>
 
 <table id="table">
 <tr>
@@ -61,29 +79,21 @@ padding:10px;
 </tr>
 </table>
 
+<canvas id="priceChart"></canvas>
+
 <script>
 
-const itemMap={
-"バッグ":"T4_BAG",
-"板":"T4_PLANKS",
-"鉄鉱石":"T4_ORE",
-"布":"T4_CLOTH",
-"革":"T4_LEATHER"
-};
+let chart;
 
 async function loadPrices(){
 
 let item=document.getElementById("item").value;
-
-if(itemMap[item]){
-item=itemMap[item];
-}
-
 let server=document.getElementById("server").value;
 
-let url="https://"+server+".albion-online-data.com/api/v2/stats/prices/"+item+".json";
+let priceURL="https://"+server+".albion-online-data.com/api/v2/stats/prices/"+item+".json";
+let historyURL="https://"+server+".albion-online-data.com/api/v2/stats/history/"+item+".json";
 
-let res=await fetch(url);
+let res=await fetch(priceURL);
 let data=await res.json();
 
 let cities={};
@@ -105,20 +115,79 @@ cities[d.city].buy=d.buy_price_max;
 });
 
 let table=document.getElementById("table");
-
 table.innerHTML="<tr><th>都市</th><th>最安売り</th><th>最高買い</th></tr>";
 
+let cheapestCity="";
+let cheapest=999999999;
+
+let bestCity="";
+let best=0;
+
 for(let city in cities){
+
+let sell=cities[city].sell;
+let buy=cities[city].buy;
 
 table.innerHTML+=`
 <tr>
 <td>${city}</td>
-<td>${cities[city].sell}</td>
-<td>${cities[city].buy}</td>
+<td>${sell}</td>
+<td>${buy}</td>
 </tr>
 `;
 
+if(sell<cheapest){
+cheapest=sell;
+cheapestCity=city;
 }
+
+if(buy>best){
+best=buy;
+bestCity=city;
+}
+
+}
+
+let profit=best-cheapest;
+
+document.getElementById("best").innerHTML=
+"最安購入都市: "+cheapestCity+" "+cheapest+
+"<br>最高売却都市: "+bestCity+" "+best+
+"<br>輸送利益: "+profit+" シルバー";
+
+loadChart(historyURL);
+
+}
+
+async function loadChart(url){
+
+let res=await fetch(url);
+let data=await res.json();
+
+let prices=[];
+let dates=[];
+
+data.forEach(d=>{
+prices.push(d.avg_price);
+dates.push(d.timestamp.slice(0,10));
+});
+
+if(chart){
+chart.destroy();
+}
+
+let ctx=document.getElementById("priceChart").getContext("2d");
+
+chart=new Chart(ctx,{
+type:"line",
+data:{
+labels:dates,
+datasets:[{
+label:"平均価格",
+data:prices
+}]
+}
+});
 
 }
 

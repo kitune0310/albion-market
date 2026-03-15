@@ -5,7 +5,6 @@
 <title>アルビオン市場分析ツール</title>
 
 <style>
-
 body{
 background:#0a0a0a;
 color:white;
@@ -13,9 +12,7 @@ font-family:sans-serif;
 text-align:center;
 }
 
-h1{
-color:#ffd700;
-}
+h1{color:#ffd700;}
 
 input,select{
 padding:10px;
@@ -39,12 +36,6 @@ td,th{
 border:1px solid #444;
 padding:10px;
 }
-
-.result{
-margin-top:20px;
-font-size:18px;
-}
-
 </style>
 </head>
 
@@ -53,30 +44,40 @@ font-size:18px;
 <h1>アルビオン市場分析ツール</h1>
 
 <select id="server">
-<option value="west">アメリカサーバー</option>
-<option value="europe">ヨーロッパサーバー</option>
-<option value="east">アジアサーバー</option>
+<option value="west">アメリカ</option>
+<option value="europe">ヨーロッパ</option>
+<option value="east">アジア</option>
 </select>
 
-<input id="item" value="T4_BAG">
+<input id="item" placeholder="バッグ など">
 
 <button onclick="loadPrices()">検索</button>
-
-<div class="result" id="best"></div>
 
 <table id="table">
 <tr>
 <th>都市</th>
-<th>売却価格</th>
-<th>販売価格</th>
+<th>最安売り</th>
+<th>最高買い</th>
 </tr>
 </table>
 
 <script>
 
+const itemMap={
+"バッグ":"T4_BAG",
+"板":"T4_PLANKS",
+"鉄鉱石":"T4_ORE",
+"布":"T4_CLOTH",
+"革":"T4_LEATHER"
+};
+
 async function loadPrices(){
 
 let item=document.getElementById("item").value;
+
+if(itemMap[item]){
+item=itemMap[item];
+}
 
 let server=document.getElementById("server").value;
 
@@ -105,45 +106,19 @@ cities[d.city].buy=d.buy_price_max;
 
 let table=document.getElementById("table");
 
-table.innerHTML="<tr><th>都市</th><th>最安売却</th><th>最高販売</th></tr>";
-
-let cheapestCity="";
-let cheapest=999999999;
-
-let bestCity="";
-let best=0;
+table.innerHTML="<tr><th>都市</th><th>最安売り</th><th>最高買い</th></tr>";
 
 for(let city in cities){
-
-let sell=cities[city].sell;
-let buy=cities[city].buy;
 
 table.innerHTML+=`
 <tr>
 <td>${city}</td>
-<td>${sell}</td>
-<td>${buy}</td>
+<td>${cities[city].sell}</td>
+<td>${cities[city].buy}</td>
 </tr>
 `;
 
-if(sell<cheapest){
-cheapest=sell;
-cheapestCity=city;
 }
-
-if(buy>best){
-best=buy;
-bestCity=city;
-}
-
-}
-
-let profit=best-cheapest;
-
-document.getElementById("best").innerHTML=
-"最安購入都市: "+cheapestCity+" "+cheapest+
-"<br>最高売却都市: "+bestCity+" "+best+
-"<br>輸送利益: "+profit+" シルバー";
 
 }
 

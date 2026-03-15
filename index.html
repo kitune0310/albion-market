@@ -42,14 +42,14 @@ border:1px solid #444;
 padding:10px;
 }
 
+canvas{
+max-width:900px;
+margin-top:40px;
+}
+
 .result{
 margin-top:20px;
 font-size:18px;
-}
-
-canvas{
-max-width:800px;
-margin-top:40px;
 }
 
 </style>
@@ -91,7 +91,8 @@ let item=document.getElementById("item").value;
 let server=document.getElementById("server").value;
 
 let priceURL="https://"+server+".albion-online-data.com/api/v2/stats/prices/"+item+".json";
-let historyURL="https://"+server+".albion-online-data.com/api/v2/stats/history/"+item+".json";
+
+let historyURL="https://"+server+".albion-online-data.com/api/v2/stats/history/"+item+"?locations=Bridgewatch";
 
 let res=await fetch(priceURL);
 let data=await res.json();
@@ -115,6 +116,7 @@ cities[d.city].buy=d.buy_price_max;
 });
 
 let table=document.getElementById("table");
+
 table.innerHTML="<tr><th>都市</th><th>最安売り</th><th>最高買い</th></tr>";
 
 let cheapestCity="";
@@ -167,7 +169,7 @@ let data=await res.json();
 let prices=[];
 let dates=[];
 
-data.forEach(d=>{
+data[0].data.forEach(d=>{
 prices.push(d.avg_price);
 dates.push(d.timestamp.slice(0,10));
 });
@@ -176,7 +178,7 @@ if(chart){
 chart.destroy();
 }
 
-let ctx=document.getElementById("priceChart").getContext("2d");
+let ctx=document.getElementById("priceChart");
 
 chart=new Chart(ctx,{
 type:"line",
@@ -184,8 +186,26 @@ data:{
 labels:dates,
 datasets:[{
 label:"平均価格",
-data:prices
+data:prices,
+tension:0.3
 }]
+},
+options:{
+plugins:{
+legend:{
+labels:{
+color:"white"
+}
+}
+},
+scales:{
+x:{
+ticks:{color:"white"}
+},
+y:{
+ticks:{color:"white"}
+}
+}
 }
 });
 

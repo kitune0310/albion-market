@@ -2,9 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>アルビオン市場分析ツール</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>アルビオン市場ツール</title>
 
 <style>
 
@@ -31,15 +29,9 @@ font-size:16px;
 cursor:pointer;
 }
 
-.container{
-display:flex;
-justify-content:center;
-gap:40px;
-margin-top:30px;
-flex-wrap:wrap;
-}
-
 table{
+margin:auto;
+margin-top:20px;
 border-collapse:collapse;
 }
 
@@ -48,12 +40,7 @@ border:1px solid #444;
 padding:10px;
 }
 
-canvas{
-width:600px;
-height:400px;
-}
-
-.result{
+#result{
 margin-top:20px;
 font-size:18px;
 }
@@ -71,13 +58,19 @@ font-size:18px;
 <option value="east">アジアサーバー</option>
 </select>
 
-<input id="item" value="T4_BAG">
+<br>
 
-<button onclick="loadPrices()">検索</button>
+<input id="search" placeholder="日本語でアイテム検索">
 
-<div class="result" id="best"></div>
+<button onclick="searchItem()">検索</button>
 
-<div class="container">
+<br><br>
+
+<select id="items"></select>
+
+<button onclick="loadPrices()">価格取得</button>
+
+<div id="result"></div>
 
 <table id="table">
 <tr>
@@ -87,24 +80,60 @@ font-size:18px;
 </tr>
 </table>
 
-<canvas id="priceChart"></canvas>
-
-</div>
-
 <script>
 
-let chart;
+let itemList=[];
+
+async function loadItems(){
+
+let res=await fetch("https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.json");
+
+itemList=await res.json();
+
+}
+
+async function searchItem(){
+
+let text=document.getElementById("search").value.toLowerCase();
+
+let select=document.getElementById("items");
+
+select.innerHTML="";
+
+itemList.forEach(item=>{
+
+if(item.LocalizedNames && item.LocalizedNames["JA-JP"]){
+
+let name=item.LocalizedNames["JA-JP"].toLowerCase();
+
+if(name.includes(text)){
+
+let option=document.createElement("option");
+
+option.value=item.UniqueName;
+
+option.text=item.LocalizedNames["JA-JP"];
+
+select.appendChild(option);
+
+}
+
+}
+
+});
+
+}
 
 async function loadPrices(){
 
-let item=document.getElementById("item").value;
+let item=document.getElementById("items").value;
+
 let server=document.getElementById("server").value;
 
-let priceURL="https://"+server+".albion-online-data.com/api/v2/stats/prices/"+item+".json";
+let url="https://"+server+".albion-online-data.com/api/v2/stats/prices/"+item+".json";
 
-let historyURL="https://"+server+".albion-online-data.com/api/v2/stats/history/"+item+"?locations=Bridgewatch";
+let res=await fetch(url);
 
-let res=await fetch(priceURL);
 let data=await res.json();
 
 let cities={};
@@ -162,47 +191,14 @@ bestCity=city;
 
 let profit=best-cheapest;
 
-document.getElementById("best").innerHTML=
+document.getElementById("result").innerHTML=
 "最安購入都市: "+cheapestCity+" "+cheapest+
 "<br>最高売却都市: "+bestCity+" "+best+
 "<br>輸送利益: "+profit+" シルバー";
 
-loadChart(historyURL);
-
 }
 
-async function loadChart(url){
-
-let res=await fetch(url);
-let data=await res.json();
-
-let prices=[];
-let dates=[];
-
-data[0].data.forEach(d=>{
-prices.push(d.avg_price);
-dates.push(d.timestamp.slice(0,10));
-});
-
-if(chart){
-chart.destroy();
-}
-
-let ctx=document.getElementById("priceChart");
-
-chart=new Chart(ctx,{
-type:"line",
-data:{
-labels:dates,
-datasets:[{
-label:"平均価格",
-data:prices,
-tension:0.3
-}]
-}
-});
-
-}
+loadItems();
 
 </script>
 

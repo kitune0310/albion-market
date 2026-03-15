@@ -1,13 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <title>Albion AI Market Analyzer</title>
+
 <style>
 body{
 background:#0a0a0a;
 color:white;
 font-family:sans-serif;
 text-align:center;
+}
+
+h1{
+color:#ffd700;
 }
 
 input{
@@ -19,6 +25,7 @@ button{
 padding:10px;
 font-size:18px;
 margin-left:10px;
+cursor:pointer;
 }
 
 table{
@@ -31,6 +38,11 @@ td,th{
 border:1px solid #444;
 padding:10px;
 }
+
+.result{
+margin-top:20px;
+font-size:18px;
+}
 </style>
 </head>
 
@@ -40,6 +52,8 @@ padding:10px;
 
 <input id="item" value="T4_BAG">
 <button onclick="loadPrices()">Search</button>
+
+<div class="result" id="best"></div>
 
 <table id="table">
 <tr>
@@ -58,24 +72,67 @@ let item=document.getElementById("item").value;
 let url="https://west.albion-online-data.com/api/v2/stats/prices/"+item+".json";
 
 let res=await fetch(url);
-
 let data=await res.json();
+
+let cities={};
+
+data.forEach(d=>{
+
+if(!cities[d.city]){
+cities[d.city]={sell:999999999,buy:0};
+}
+
+if(d.sell_price_min>0 && d.sell_price_min<cities[d.city].sell){
+cities[d.city].sell=d.sell_price_min;
+}
+
+if(d.buy_price_max>cities[d.city].buy){
+cities[d.city].buy=d.buy_price_max;
+}
+
+});
 
 let table=document.getElementById("table");
 
 table.innerHTML="<tr><th>City</th><th>Sell</th><th>Buy</th></tr>";
 
-data.forEach(d=>{
+let cheapestCity="";
+let cheapest=999999999;
+
+let bestCity="";
+let best=0;
+
+for(let city in cities){
+
+let sell=cities[city].sell;
+let buy=cities[city].buy;
 
 table.innerHTML+=`
 <tr>
-<td>${d.city}</td>
-<td>${d.sell_price_min}</td>
-<td>${d.buy_price_max}</td>
+<td>${city}</td>
+<td>${sell}</td>
+<td>${buy}</td>
 </tr>
 `;
 
-});
+if(sell<cheapest){
+cheapest=sell;
+cheapestCity=city;
+}
+
+if(buy>best){
+best=buy;
+bestCity=city;
+}
+
+}
+
+let profit=best-cheapest;
+
+document.getElementById("best").innerHTML=
+"最安購入: "+cheapestCity+" "+cheapest+
+"<br>最高売却: "+bestCity+" "+best+
+"<br>輸送利益: "+profit+" silver";
 
 }
 

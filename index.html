@@ -3,8 +3,9 @@
 <html lang="ja">
 
 <head>
+
 <meta charset="UTF-8">
-<title>Albion Market Analyzer PRO v2</title>
+<title>Albion Market Analyzer PRO</title>
 
 <link rel="stylesheet" href="style.css">
 
@@ -14,28 +15,34 @@
 
 <body>
 
-<h1>⚔ Albion Market Analyzer PRO v2</h1>
+<h1>⚔ Albion Market Analyzer PRO</h1>
 
 <div class="panel">
 
 <select id="server">
+
 <option value="east">Asia</option>
 <option value="west">America</option>
 <option value="europe">Europe</option>
+
 </select>
 
 <select id="tier">
+
 <option value="">All Tier</option>
 <option value="T4">T4</option>
 <option value="T5">T5</option>
 <option value="T6">T6</option>
 <option value="T7">T7</option>
 <option value="T8">T8</option>
+
 </select>
 
 </div>
 
 <input id="search" placeholder="アイテム検索">
+
+<br>
 
 <select id="items"></select>
 
@@ -50,7 +57,9 @@
 
 <br>
 
-<button onclick="loadPrices()">市場分析</button> <button onclick="scanBest()">🔥 全アイテムスキャン</button> <button onclick="scanBlackMarket()">🏴 Black Market</button>
+<button onclick="loadPrices()">市場分析</button>
+
+<button onclick="scanBlackMarket()">🏴 Black Market Scan</button>
 
 <div id="result"></div>
 
@@ -59,26 +68,31 @@
 <h2>💰 BEST ITEMS</h2>
 
 <table id="bestItems">
+
 <tr>
 <th>アイテム</th>
 <th>利益</th>
 <th>利益/kg</th>
 </tr>
+
 </table>
 
 <h2>都市価格</h2>
 
 <table id="priceTable">
+
 <tr>
 <th>都市</th>
 <th>最安購入</th>
 <th>最高売却</th>
 </tr>
+
 </table>
 
 <h2>トレード</h2>
 
 <table id="tradeTable">
+
 <tr>
 <th>購入都市</th>
 <th>販売都市</th>
@@ -86,6 +100,7 @@
 <th>利益/kg</th>
 <th>利益率</th>
 </tr>
+
 </table>
 
 <canvas id="priceChart"></canvas>

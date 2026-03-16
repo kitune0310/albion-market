@@ -1,53 +1,67 @@
-body {
-  background:#0b0b0b;
-  color:white;
-  font-family:Arial;
-  text-align:center;
-  margin:0;
-  padding:20px;
+body{
+background:#0b0b0b;
+color:white;
+font-family:Arial;
+text-align:center;
+margin:0;
+padding:20px;
 }
 
-h1 { color:#ffd700; }
-
-input, select, button {
-  padding:10px;
-  font-size:16px;
-  margin:6px;
-  border-radius:6px;
-  border:none;
+h1{
+color:#ffd700;
 }
 
-button {
-  background:#ffd700;
-  color:black;
-  cursor:pointer;
-  font-weight:bold;
+input,select,button{
+padding:10px;
+font-size:16px;
+margin:6px;
+border-radius:6px;
+border:none;
 }
 
-button:hover { background:#ffe866; }
-
-table {
-  margin:auto;
-  margin-top:20px;
-  border-collapse:collapse;
-  width:95%;
-  max-width:1100px;
+button{
+background:#ffd700;
+color:black;
+cursor:pointer;
+font-weight:bold;
 }
 
-td, th {
-  border:1px solid #444;
-  padding:10px;
+button:hover{
+background:#ffe866;
 }
 
-th { background:#1a1a1a; }
+table{
+margin:auto;
+margin-top:20px;
+border-collapse:collapse;
+width:95%;
+max-width:1100px;
+}
 
-tr:nth-child(even) { background:#151515; }
+td,th{
+border:1px solid #444;
+padding:10px;
+}
 
-.profit { font-weight:bold; }
-.profit.high { color:#ffd700; }
-.profit.medium { color:#00ff7f; }
-.profit.low { color:#00eaff; }
+th{
+background:#1a1a1a;
+}
 
-.good { color:#00eaff; }
+tr:nth-child(even){
+background:#151515;
+}
 
-.loading { color:#00ffff; font-size:18px; margin-top:10px; }
+.profit{
+color:#00ff7f;
+font-weight:bold;
+}
+
+.good{
+color:#00eaff;
+}
+
+.loading{
+color:#00ffff;
+font-size:18px;
+margin-top:10px;
+}

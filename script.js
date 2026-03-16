@@ -21,6 +21,8 @@ itemList=await res.json()
 
 document.getElementById("search").addEventListener("input",searchItem)
 
+document.getElementById("items").addEventListener("change",loadPrices)
+
 function searchItem(){
 
 let text=document.getElementById("search").value.toLowerCase()
@@ -98,7 +100,29 @@ market[d.city].buy=d.buy_price_max
 })
 
 drawChart(market)
+drawPriceTable(market)
 calculateTrades(market,weight,minProfit)
+
+}
+
+function drawPriceTable(market){
+
+let table=document.getElementById("priceTable")
+
+table.innerHTML="<tr><th>都市</th><th>最安購入</th><th>最高売却</th></tr>"
+
+for(let city in market){
+
+table.innerHTML+=`
+
+<tr>
+<td>${city}</td>
+<td>${market[city].sell}</td>
+<td>${market[city].buy}</td>
+</tr>
+`
+
+}
 
 }
 
@@ -174,12 +198,17 @@ table.innerHTML="<tr><th>購入都市</th><th>販売都市</th><th>利益</th><t
 
 trades.slice(0,30).forEach(t=>{
 
+let color="orange"
+
+if(t.profit>20000) color="lime"
+else if(t.profit>5000) color="yellow"
+
 table.innerHTML+=`
 
 <tr>
 <td>${t.buyCity}</td>
 <td>${t.sellCity}</td>
-<td style="color:lime">+${t.profit}</td>
+<td style="color:${color}">+${t.profit}</td>
 <td>${t.ppkg}</td>
 <td>${t.roi}%</td>
 </tr>`
@@ -201,7 +230,7 @@ document.getElementById("result").innerHTML="分析完了"
 
 async function scanBlackMarket(){
 
-document.getElementById("result").innerHTML='<div class="loading">Black Market スキャン...</div>'
+document.getElementById("result").innerHTML='<div class="loading">Black Market スキャン中...</div>'
 
 let best=[]
 
@@ -258,7 +287,7 @@ table.innerHTML+=`
 
 })
 
-document.getElementById("result").innerHTML="Black Market スキャン完了"
+document.getElementById("result").innerHTML="スキャン完了"
 
 }
 

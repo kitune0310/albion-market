@@ -2,40 +2,60 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Albion Online 最終スーパー完全版</title>
+<title>Albion Online Market Analyzer</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
 
-<h1>Albion Online トレード分析ツール 最終スーパー完全版</h1>
+<h1>Albion Online 市場分析ツール</h1>
 
-<div class="controls">
-  <select id="server">
-    <option value="east">アジアサーバー</option>
-    <option value="west">アメリカサーバー</option>
-    <option value="europe">ヨーロッパサーバー</option>
-  </select>
+<select id="server">
+<option value="east">Asia</option>
+<option value="west">America</option>
+<option value="europe">Europe</option>
+</select>
 
-  <input id="search" placeholder="アイテム名を日本語で検索">
-  <select id="items"></select>
-  <input id="weight" placeholder="アイテム重量 (kg)" type="number">
-  <button id="analyzeBtn">市場を分析</button>
-  <button id="scanAllBtn">T4〜T8 全スキャン</button>
-</div>
+<br>
+
+<input id="search" placeholder="アイテム名を検索">
+
+<br>
+
+<select id="items"></select>
+
+<br>
+
+<input id="weight" placeholder="重量 kg" type="number">
+
+<br>
+
+<button onclick="loadPrices()">市場を分析</button>
 
 <div id="result"></div>
 
 <table id="priceTable">
-  <tr><th>都市</th><th>最安購入価格</th><th>最高売却価格</th></tr>
+<tr>
+<th>都市</th>
+<th>最安購入</th>
+<th>最高売却</th>
+</tr>
 </table>
 
 <table id="tradeTable">
-  <tr><th>購入都市</th><th>販売都市</th><th>利益</th><th>利益/kg</th><th>効率</th><th>利益率%</th></tr>
+<tr>
+<th>購入都市</th>
+<th>販売都市</th>
+<th>利益</th>
+<th>利益/kg</th>
+<th>利益率</th>
+</tr>
 </table>
 
 <canvas id="priceChart" style="max-width:900px;margin:auto;margin-top:40px;"></canvas>
 
 <script src="script.js"></script>
+
 </body>
 </html>

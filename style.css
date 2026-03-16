@@ -9,7 +9,6 @@ background-attachment:fixed;
 
 color:white;
 font-family:Arial;
-
 text-align:center;
 
 margin:0;
@@ -25,7 +24,6 @@ input,select,button{
 
 padding:10px;
 font-size:16px;
-
 margin:6px;
 
 border-radius:6px;
@@ -37,14 +35,16 @@ button{
 
 background:#ffd700;
 color:black;
+font-weight:bold;
 
 cursor:pointer;
-font-weight:bold;
 
 }
 
 button:hover{
+
 background:#ffe866;
+
 }
 
 table{
@@ -75,19 +75,8 @@ background:#1a1a1a;
 }
 
 tr:nth-child(even){
+
 background:#151515;
-}
-
-.profit{
-
-color:#00ff7f;
-font-weight:bold;
-
-}
-
-.good{
-
-color:#00eaff;
 
 }
 

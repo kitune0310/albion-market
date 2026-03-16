@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
 <meta charset="UTF-8">
-<title>Albion Online Market Analyzer</title>
+<title>Albion Market Analyzer</title>
+
 <link rel="stylesheet" href="style.css">
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 </head>
 
 <body>
@@ -19,7 +23,7 @@
 
 <br>
 
-<input id="search" placeholder="アイテム名を検索">
+<input id="search" placeholder="アイテム名検索">
 
 <br>
 
@@ -27,23 +31,34 @@
 
 <br>
 
-<input id="weight" placeholder="重量 kg" type="number">
+<img id="itemIcon">
 
 <br>
 
-<button onclick="loadPrices()">市場を分析</button>
+<input id="weight" placeholder="重量 kg" type="number">
+
+<input id="minProfit" placeholder="最低利益">
+
+<br>
+
+<button onclick="loadPrices()">市場分析</button>
 
 <div id="result"></div>
 
+<h2 id="bestTrade"></h2>
+
 <table id="priceTable">
+
 <tr>
 <th>都市</th>
 <th>最安購入</th>
 <th>最高売却</th>
 </tr>
+
 </table>
 
 <table id="tradeTable">
+
 <tr>
 <th>購入都市</th>
 <th>販売都市</th>
@@ -51,9 +66,10 @@
 <th>利益/kg</th>
 <th>利益率</th>
 </tr>
+
 </table>
 
-<canvas id="priceChart" style="max-width:900px;margin:auto;margin-top:40px;"></canvas>
+<canvas id="priceChart"></canvas>
 
 <script src="script.js"></script>
 

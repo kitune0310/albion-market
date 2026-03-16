@@ -1,7 +1,7 @@
 body{
 
 background:
-linear-gradient(rgba(0,0,0,0.85),rgba(0,0,0,0.9)),
+linear-gradient(rgba(0,0,0,0.85),rgba(0,0,0,0.95)),
 url("https://images.albiononline.com/uploads/media/default/media/5e6e34c5d64e7.jpg");
 
 background-size:cover;
@@ -17,7 +17,16 @@ padding:20px;
 }
 
 h1{
+
 color:#ffd700;
+font-size:32px;
+
+}
+
+.panel{
+
+margin-bottom:15px;
+
 }
 
 input,select,button{
@@ -36,7 +45,6 @@ button{
 background:#ffd700;
 color:black;
 font-weight:bold;
-
 cursor:pointer;
 
 }
@@ -84,7 +92,6 @@ background:#151515;
 
 color:#00ffff;
 font-size:18px;
-
 animation:pulse 1s infinite;
 
 }

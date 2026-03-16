@@ -1,8 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Albion Market Pro Analyzer</title>
+<title>Albion 市場プロ分析ツール</title>
 
 <style>
 
@@ -79,45 +80,46 @@ margin-top:10px;
 
 <body>
 
-<h1>Albion Market PRO Analyzer</h1>
+<h1>Albion 市場プロ分析ツール</h1>
 
 <select id="server">
-<option value="west">America Server</option>
-<option value="europe">Europe Server</option>
-<option value="east">Asia Server</option>
+<option value="west">アメリカサーバー</option>
+<option value="europe">ヨーロッパサーバー</option>
+<option value="east">アジアサーバー</option>
 </select>
 
 <br>
 
-<input id="search" placeholder="Search item (Japanese)">
+<input id="search" placeholder="アイテム名を日本語で検索">
+
 <br>
 
 <select id="items"></select>
 
 <br>
 
-<input id="weight" placeholder="Item Weight (kg)" type="number">
+<input id="weight" placeholder="アイテム重量 (kg)" type="number">
 
 <br>
 
-<button onclick="loadPrices()">Analyze Market</button>
+<button onclick="loadPrices()">市場を分析</button>
 
 <div id="result"></div>
 
 <table id="priceTable">
 <tr>
-<th>City</th>
-<th>Sell Min</th>
-<th>Buy Max</th>
+<th>都市</th>
+<th>最安売り価格</th>
+<th>最高買い価格</th>
 </tr>
 </table>
 
 <table id="tradeTable">
 <tr>
-<th>Buy City</th>
-<th>Sell City</th>
-<th>Profit</th>
-<th>Profit/kg</th>
+<th>購入都市</th>
+<th>販売都市</th>
+<th>利益</th>
+<th>利益/kg</th>
 </tr>
 </table>
 
@@ -171,7 +173,7 @@ async function loadPrices(){
 let item=document.getElementById("items").value;
 
 if(!item){
-alert("Select item first");
+alert("アイテムを選択してください");
 return;
 }
 
@@ -179,7 +181,7 @@ let weight=parseFloat(document.getElementById("weight").value) || 1;
 
 let server=document.getElementById("server").value;
 
-document.getElementById("result").innerHTML='<div class="loading">Loading market data...</div>';
+document.getElementById("result").innerHTML='<div class="loading">市場データ取得中...</div>';
 
 let url="https://"+server+".albion-online-data.com/api/v2/stats/prices/"+item+".json";
 
@@ -207,7 +209,7 @@ cities[d.city].buy=d.buy_price_max;
 
 let priceTable=document.getElementById("priceTable");
 
-priceTable.innerHTML="<tr><th>City</th><th>Sell Min</th><th>Buy Max</th></tr>";
+priceTable.innerHTML="<tr><th>都市</th><th>最安売り価格</th><th>最高買い価格</th></tr>";
 
 for(let city in cities){
 
@@ -255,7 +257,7 @@ trades.sort((a,b)=>b.profit-a.profit);
 
 let tradeTable=document.getElementById("tradeTable");
 
-tradeTable.innerHTML="<tr><th>Buy City</th><th>Sell City</th><th>Profit</th><th>Profit/kg</th></tr>";
+tradeTable.innerHTML="<tr><th>購入都市</th><th>販売都市</th><th>利益</th><th>利益/kg</th></tr>";
 
 trades.slice(0,20).forEach(t=>{
 
@@ -270,7 +272,7 @@ tradeTable.innerHTML+=`
 
 });
 
-document.getElementById("result").innerHTML="Analysis Complete";
+document.getElementById("result").innerHTML="市場分析完了";
 
 }
 

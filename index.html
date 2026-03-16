@@ -1,38 +1,49 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>アルビオン市場ツール</title>
+<title>Albion Market Pro Analyzer</title>
 
 <style>
 
 body{
-background:#0a0a0a;
+background:#0b0b0b;
 color:white;
-font-family:sans-serif;
+font-family:Arial;
 text-align:center;
+margin:0;
+padding:20px;
 }
 
 h1{
 color:#ffd700;
 }
 
-input,select{
+input,select,button{
 padding:10px;
 font-size:16px;
-margin:5px;
+margin:6px;
+border-radius:6px;
+border:none;
 }
 
 button{
-padding:10px;
-font-size:16px;
+background:#ffd700;
+color:black;
 cursor:pointer;
+font-weight:bold;
+}
+
+button:hover{
+background:#ffe866;
 }
 
 table{
 margin:auto;
 margin-top:20px;
 border-collapse:collapse;
+width:95%;
+max-width:1100px;
 }
 
 td,th{
@@ -40,9 +51,27 @@ border:1px solid #444;
 padding:10px;
 }
 
-#result{
-margin-top:20px;
+th{
+background:#1a1a1a;
+}
+
+tr:nth-child(even){
+background:#151515;
+}
+
+.profit{
+color:#00ff7f;
+font-weight:bold;
+}
+
+.good{
+color:#00eaff;
+}
+
+.loading{
+color:#00ffff;
 font-size:18px;
+margin-top:10px;
 }
 
 </style>
@@ -50,33 +79,45 @@ font-size:18px;
 
 <body>
 
-<h1>アルビオン市場分析ツール</h1>
+<h1>Albion Market PRO Analyzer</h1>
 
 <select id="server">
-<option value="west">アメリカサーバー</option>
-<option value="europe">ヨーロッパサーバー</option>
-<option value="east">アジアサーバー</option>
+<option value="west">America Server</option>
+<option value="europe">Europe Server</option>
+<option value="east">Asia Server</option>
 </select>
 
 <br>
 
-<input id="search" placeholder="日本語でアイテム検索">
-
-<button onclick="searchItem()">検索</button>
-
-<br><br>
+<input id="search" placeholder="Search item (Japanese)">
+<br>
 
 <select id="items"></select>
 
-<button onclick="loadPrices()">価格取得</button>
+<br>
+
+<input id="weight" placeholder="Item Weight (kg)" type="number">
+
+<br>
+
+<button onclick="loadPrices()">Analyze Market</button>
 
 <div id="result"></div>
 
-<table id="table">
+<table id="priceTable">
 <tr>
-<th>都市</th>
-<th>最安購入</th>
-<th>最高販売</th>
+<th>City</th>
+<th>Sell Min</th>
+<th>Buy Max</th>
+</tr>
+</table>
+
+<table id="tradeTable">
+<tr>
+<th>Buy City</th>
+<th>Sell City</th>
+<th>Profit</th>
+<th>Profit/kg</th>
 </tr>
 </table>
 
@@ -92,7 +133,9 @@ itemList=await res.json();
 
 }
 
-async function searchItem(){
+document.getElementById("search").addEventListener("input",searchItem);
+
+function searchItem(){
 
 let text=document.getElementById("search").value.toLowerCase();
 
@@ -111,7 +154,6 @@ if(name.includes(text)){
 let option=document.createElement("option");
 
 option.value=item.UniqueName;
-
 option.text=item.LocalizedNames["JA-JP"];
 
 select.appendChild(option);
@@ -128,7 +170,16 @@ async function loadPrices(){
 
 let item=document.getElementById("items").value;
 
+if(!item){
+alert("Select item first");
+return;
+}
+
+let weight=parseFloat(document.getElementById("weight").value) || 1;
+
 let server=document.getElementById("server").value;
+
+document.getElementById("result").innerHTML='<div class="loading">Loading market data...</div>';
 
 let url="https://"+server+".albion-online-data.com/api/v2/stats/prices/"+item+".json";
 
@@ -154,47 +205,72 @@ cities[d.city].buy=d.buy_price_max;
 
 });
 
-let table=document.getElementById("table");
+let priceTable=document.getElementById("priceTable");
 
-table.innerHTML="<tr><th>都市</th><th>最安購入</th><th>最高販売</th></tr>";
-
-let cheapestCity="";
-let cheapest=999999999;
-
-let bestCity="";
-let best=0;
+priceTable.innerHTML="<tr><th>City</th><th>Sell Min</th><th>Buy Max</th></tr>";
 
 for(let city in cities){
 
-let sell=cities[city].sell;
-let buy=cities[city].buy;
-
-table.innerHTML+=`
+priceTable.innerHTML+=`
 <tr>
 <td>${city}</td>
-<td>${sell}</td>
-<td>${buy}</td>
+<td>${cities[city].sell}</td>
+<td>${cities[city].buy}</td>
 </tr>
 `;
 
-if(sell<cheapest){
-cheapest=sell;
-cheapestCity=city;
 }
 
-if(buy>best){
-best=buy;
-bestCity=city;
+let trades=[];
+
+for(let buyCity in cities){
+
+for(let sellCity in cities){
+
+if(buyCity!==sellCity){
+
+let buy=cities[buyCity].sell;
+let sell=cities[sellCity].buy;
+
+let profit=Math.floor(sell*0.96-buy);
+
+if(profit>0){
+
+trades.push({
+buyCity:buyCity,
+sellCity:sellCity,
+profit:profit,
+ppkg:(profit/weight).toFixed(2)
+});
+
+}
+
 }
 
 }
 
-let profit=best-cheapest;
+}
 
-document.getElementById("result").innerHTML=
-"最安購入都市: "+cheapestCity+" "+cheapest+
-"<br>最高売却都市: "+bestCity+" "+best+
-"<br>輸送利益: "+profit+" シルバー";
+trades.sort((a,b)=>b.profit-a.profit);
+
+let tradeTable=document.getElementById("tradeTable");
+
+tradeTable.innerHTML="<tr><th>Buy City</th><th>Sell City</th><th>Profit</th><th>Profit/kg</th></tr>";
+
+trades.slice(0,20).forEach(t=>{
+
+tradeTable.innerHTML+=`
+<tr>
+<td>${t.buyCity}</td>
+<td>${t.sellCity}</td>
+<td class="profit">+${t.profit}</td>
+<td class="good">${t.ppkg}</td>
+</tr>
+`;
+
+});
+
+document.getElementById("result").innerHTML="Analysis Complete";
 
 }
 

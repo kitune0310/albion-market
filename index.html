@@ -1,354 +1,41 @@
 <!DOCTYPE html>
-
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Albion online 市場分析ツール</title>
-
+<title>Albion Online 最終スーパー完全版</title>
+<link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-
-body{
-background:#0b0b0b;
-color:white;
-font-family:Arial;
-text-align:center;
-margin:0;
-padding:20px;
-}
-
-h1{
-color:#ffd700;
-}
-
-input,select,button{
-padding:10px;
-font-size:16px;
-margin:6px;
-border-radius:6px;
-border:none;
-}
-
-button{
-background:#ffd700;
-color:black;
-cursor:pointer;
-font-weight:bold;
-}
-
-button:hover{
-background:#ffe866;
-}
-
-table{
-margin:auto;
-margin-top:20px;
-border-collapse:collapse;
-width:95%;
-max-width:1100px;
-}
-
-td,th{
-border:1px solid #444;
-padding:10px;
-}
-
-th{
-background:#1a1a1a;
-}
-
-tr:nth-child(even){
-background:#151515;
-}
-
-.profit{
-color:#00ff7f;
-font-weight:bold;
-}
-
-.good{
-color:#00eaff;
-}
-
-.loading{
-color:#00ffff;
-font-size:18px;
-margin-top:10px;
-}
-
-</style>
-
 </head>
-
 <body>
 
-<h1>Albion online 市場分析ツール</h1>
+<h1>Albion Online トレード分析ツール 最終スーパー完全版</h1>
 
-<select id="server">
-<option value="east">アジアサーバー</option>
-<option value="west">アメリカサーバー</option>
-<option value="europe">ヨーロッパサーバー</option>
-</select>
+<div class="controls">
+  <select id="server">
+    <option value="east">アジアサーバー</option>
+    <option value="west">アメリカサーバー</option>
+    <option value="europe">ヨーロッパサーバー</option>
+  </select>
 
-<br>
-
-<input id="search" placeholder="アイテム名を日本語で検索">
-
-<br>
-
-<select id="items"></select>
-
-<br>
-
-<input id="weight" placeholder="アイテム重量 (kg)" type="number">
-
-<br>
-
-<button onclick="loadPrices()">市場を分析</button>
+  <input id="search" placeholder="アイテム名を日本語で検索">
+  <select id="items"></select>
+  <input id="weight" placeholder="アイテム重量 (kg)" type="number">
+  <button id="analyzeBtn">市場を分析</button>
+  <button id="scanAllBtn">T4〜T8 全スキャン</button>
+</div>
 
 <div id="result"></div>
 
 <table id="priceTable">
-<tr>
-<th>都市</th>
-<th>最安購入価格</th>
-<th>最高売却価格</th>
-</tr>
+  <tr><th>都市</th><th>最安購入価格</th><th>最高売却価格</th></tr>
 </table>
 
 <table id="tradeTable">
-<tr>
-<th>購入都市</th>
-<th>販売都市</th>
-<th>利益</th>
-<th>利益/kg</th>
-<th>利益率%</th>
-</tr>
+  <tr><th>購入都市</th><th>販売都市</th><th>利益</th><th>利益/kg</th><th>効率</th><th>利益率%</th></tr>
 </table>
 
 <canvas id="priceChart" style="max-width:900px;margin:auto;margin-top:40px;"></canvas>
 
-<script>
-
-let itemList=[];
-
-let cityOrder=[
-"Bridgewatch",
-"Martlock",
-"Thetford",
-"Fort Sterling",
-"Lymhurst",
-"Caerleon",
-"Brecilien"
-];
-
-async function loadItems(){
-
-let res=await fetch("https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.json");
-itemList=await res.json();
-
-}
-
-document.getElementById("search").addEventListener("input",searchItem);
-
-function searchItem(){
-
-let text=document.getElementById("search").value.toLowerCase();
-let select=document.getElementById("items");
-
-select.innerHTML="";
-
-itemList.forEach(item=>{
-
-if(item.LocalizedNames && item.LocalizedNames["JA-JP"]){
-
-let name=item.LocalizedNames["JA-JP"].toLowerCase();
-
-if(name.includes(text)){
-
-let option=document.createElement("option");
-option.value=item.UniqueName;
-option.text=item.LocalizedNames["JA-JP"];
-
-select.appendChild(option);
-
-}
-
-}
-
-});
-
-}
-
-async function loadPrices(){
-
-let item=document.getElementById("items").value;
-
-if(!item){
-alert("アイテムを選択してください");
-return;
-}
-
-let weight=parseFloat(document.getElementById("weight").value);
-
-if(!weight || weight<=0){
-weight=1;
-}
-
-let server=document.getElementById("server").value;
-
-document.getElementById("result").innerHTML='<div class="loading">市場データ取得中...</div>';
-
-let url="https://"+server+".albion-online-data.com/api/v2/stats/prices/"+item+".json";
-
-let res=await fetch(url);
-let data=await res.json();
-
-let cities={};
-
-data.forEach(d=>{
-
-if(!cities[d.city]){
-cities[d.city]={sell:999999999,buy:0};
-}
-
-if(d.sell_price_min>0 && d.sell_price_min<cities[d.city].sell){
-cities[d.city].sell=d.sell_price_min;
-}
-
-if(d.buy_price_max>cities[d.city].buy){
-cities[d.city].buy=d.buy_price_max;
-}
-
-});
-
-let priceTable=document.getElementById("priceTable");
-
-priceTable.innerHTML="<tr><th>都市</th><th>最安購入価格</th><th>最高売却価格</th></tr>";
-
-let chartCities=[];
-let sellPrices=[];
-let buyPrices=[];
-
-cityOrder.forEach(city=>{
-
-if(cities[city]){
-
-let sell=cities[city].sell;
-let buy=cities[city].buy;
-
-let sellText=(sell==999999999 || sell==0)?"-":sell;
-let buyText=(buy==0)?"-":buy;
-
-priceTable.innerHTML+=`
-<tr>
-<td>${city}</td>
-<td>${sellText}</td>
-<td>${buyText}</td>
-</tr>
-`;
-
-chartCities.push(city);
-sellPrices.push(sell==999999999?0:sell);
-buyPrices.push(buy);
-
-}
-
-});
-
-let trades=[];
-
-for(let buyCity in cities){
-
-for(let sellCity in cities){
-
-if(buyCity!==sellCity){
-
-let buy=cities[buyCity].sell;
-let sell=cities[sellCity].buy;
-
-let profit=Math.floor(sell*0.935-buy);
-
-if(profit>0){
-
-trades.push({
-buyCity:buyCity,
-sellCity:sellCity,
-profit:profit,
-ppkg:(profit/weight).toFixed(2),
-roi:((profit/buy)*100).toFixed(1)
-});
-
-}
-
-}
-
-}
-
-}
-
-trades.sort((a,b)=>b.profit-a.profit);
-
-let tradeTable=document.getElementById("tradeTable");
-
-tradeTable.innerHTML="<tr><th>購入都市</th><th>販売都市</th><th>利益</th><th>利益/kg</th><th>利益率%</th></tr>";
-
-trades.slice(0,20).forEach(t=>{
-
-tradeTable.innerHTML+=`
-<tr>
-<td>${t.buyCity}</td>
-<td>${t.sellCity}</td>
-<td class="profit">+${t.profit}</td>
-<td class="good">${t.ppkg}</td>
-<td>${t.roi}%</td>
-</tr>
-`;
-
-});
-
-let ctx=document.getElementById("priceChart").getContext("2d");
-
-if(window.priceChart){
-window.priceChart.destroy();
-}
-
-window.priceChart=new Chart(ctx,{
-type:"bar",
-data:{
-labels:chartCities,
-datasets:[
-{
-label:"最安購入価格",
-data:sellPrices,
-backgroundColor:"#00eaff"
-},
-{
-label:"最高売却価格",
-data:buyPrices,
-backgroundColor:"#ffd700"
-}
-]
-},
-options:{
-plugins:{
-legend:{labels:{color:"white"}}
-},
-scales:{
-x:{ticks:{color:"white"}},
-y:{ticks:{color:"white"}}
-}
-}
-});
-
-document.getElementById("result").innerHTML="市場分析完了";
-
-}
-
-loadItems();
-
-</script>
-
+<script src="script.js"></script>
 </body>
 </html>

@@ -19,7 +19,6 @@ padding:20px;
 h1{
 
 color:#ffd700;
-font-size:32px;
 
 }
 
@@ -116,5 +115,17 @@ canvas{
 max-width:900px;
 margin:auto;
 margin-top:40px;
+
+}
+
+@media (max-width:700px){
+
+table{
+font-size:12px;
+}
+
+input,select,button{
+font-size:14px;
+}
 
 }

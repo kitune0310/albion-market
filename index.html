@@ -2,8 +2,9 @@
 <html lang="ja">
 
 <head>
+
 <meta charset="UTF-8">
-<title>Albion Market Analyzer</title>
+<title>Albion Market Analyzer PRO</title>
 
 <link rel="stylesheet" href="style.css">
 
@@ -13,12 +14,14 @@
 
 <body>
 
-<h1>Albion Online 市場分析ツール</h1>
+<h1>Albion Online Market Analyzer PRO</h1>
 
 <select id="server">
+
 <option value="east">Asia</option>
 <option value="west">America</option>
 <option value="europe">Europe</option>
+
 </select>
 
 <br>
@@ -43,9 +46,23 @@
 
 <button onclick="loadPrices()">市場分析</button>
 
+<button onclick="scanBest()">🔥 最強アイテム検索</button>
+
 <div id="result"></div>
 
 <h2 id="bestTrade"></h2>
+
+<h2>💰 BEST ITEM</h2>
+
+<table id="bestItems">
+
+<tr>
+<th>アイテム</th>
+<th>利益</th>
+<th>利益/kg</th>
+</tr>
+
+</table>
 
 <table id="priceTable">
 

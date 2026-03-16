@@ -24,6 +24,7 @@ document.getElementById("search").addEventListener("input",searchItem)
 function searchItem(){
 
 let text=document.getElementById("search").value.toLowerCase()
+let tier=document.getElementById("tier").value
 
 let select=document.getElementById("items")
 
@@ -31,20 +32,20 @@ select.innerHTML=""
 
 itemList.forEach(item=>{
 
-if(item.LocalizedNames && item.LocalizedNames["JA-JP"]){
+if(!item.LocalizedNames) return
 
-let name=item.LocalizedNames["JA-JP"].toLowerCase()
+let name=item.LocalizedNames["JA-JP"]||""
 
-if(name.includes(text)){
+if(tier && !item.UniqueName.startsWith(tier)) return
+
+if(name.toLowerCase().includes(text)){
 
 let option=document.createElement("option")
 
 option.value=item.UniqueName
-option.text=item.LocalizedNames["JA-JP"]
+option.text=name
 
 select.appendChild(option)
-
-}
 
 }
 
@@ -67,7 +68,6 @@ if(!item) return
 updateIcon(item)
 
 let weight=parseFloat(document.getElementById("weight").value||1)
-
 let minProfit=parseInt(document.getElementById("minProfit").value||0)
 
 let server=document.getElementById("server").value
@@ -77,7 +77,6 @@ document.getElementById("result").innerHTML='<div class="loading">市場デー�
 let url="https://"+server+".albion-online-data.com/api/v2/stats/prices/"+item+"?locations="+cities.join(",")
 
 let res=await fetch(url)
-
 let data=await res.json()
 
 let market={}
@@ -98,7 +97,39 @@ market[d.city].buy=d.buy_price_max
 
 })
 
+drawChart(market)
 calculateTrades(market,weight,minProfit)
+
+}
+
+function drawChart(market){
+
+let labels=[]
+let buy=[]
+let sell=[]
+
+for(let city in market){
+
+labels.push(city)
+buy.push(market[city].sell)
+sell.push(market[city].buy)
+
+}
+
+let ctx=document.getElementById("priceChart")
+
+if(priceChart) priceChart.destroy()
+
+priceChart=new Chart(ctx,{
+type:"bar",
+data:{
+labels:labels,
+datasets:[
+{label:"最安購入",data:buy,backgroundColor:"cyan"},
+{label:"最高売却",data:sell,backgroundColor:"orange"}
+]
+}
+})
 
 }
 
@@ -115,20 +146,18 @@ if(buyCity===sellCity) continue
 let buy=market[buyCity].sell
 let sell=market[sellCity].buy
 
-if(buy==999999999 || sell==0) continue
+if(buy==999999999||sell==0) continue
 
 let profit=Math.floor(sell*0.935-buy)
 
 if(profit>minProfit){
 
 trades.push({
-
 buyCity,
 sellCity,
 profit,
 ppkg:(profit/weight).toFixed(2),
 roi:((profit/buy)*100).toFixed(1)
-
 })
 
 }
@@ -139,13 +168,13 @@ roi:((profit/buy)*100).toFixed(1)
 
 trades.sort((a,b)=>b.profit-a.profit)
 
-let tradeTable=document.getElementById("tradeTable")
+let table=document.getElementById("tradeTable")
 
-tradeTable.innerHTML="<tr><th>購入都市</th><th>販売都市</th><th>利益</th><th>利益/kg</th><th>利益率</th></tr>"
+table.innerHTML="<tr><th>購入都市</th><th>販売都市</th><th>利益</th><th>利益/kg</th><th>利益率</th></tr>"
 
 trades.slice(0,30).forEach(t=>{
 
-tradeTable.innerHTML+=`
+table.innerHTML+=`
 
 <tr>
 <td>${t.buyCity}</td>
@@ -153,9 +182,7 @@ tradeTable.innerHTML+=`
 <td style="color:lime">+${t.profit}</td>
 <td>${t.ppkg}</td>
 <td>${t.roi}%</td>
-</tr>
-
-`
+</tr>`
 
 })
 
@@ -164,32 +191,31 @@ if(trades.length>0){
 let best=trades[0]
 
 document.getElementById("bestTrade").innerHTML=
-
 "🔥 BEST TRADE "+best.buyCity+" → "+best.sellCity+" 利益 "+best.profit
 
 }
 
-document.getElementById("result").innerHTML="市場分析完了"
+document.getElementById("result").innerHTML="分析完了"
 
 }
 
-async function scanBest(){
+async function scanBlackMarket(){
 
-document.getElementById("result").innerHTML='<div class="loading">全アイテムスキャン中...</div>'
+document.getElementById("result").innerHTML='<div class="loading">Black Market スキャン...</div>'
 
 let best=[]
 
-for(let i=0;i<itemList.length;i++){
+let sample=itemList.slice(0,800)
 
-let item=itemList[i].UniqueName
+await Promise.all(sample.map(async item=>{
 
 try{
 
-let res=await fetch("https://east.albion-online-data.com/api/v2/stats/prices/"+item+"?locations=Caerleon,Black Market")
+let res=await fetch("https://east.albion-online-data.com/api/v2/stats/prices/"+item.UniqueName+"?locations=Caerleon,Black Market")
 
 let data=await res.json()
 
-if(data.length<2) continue
+if(data.length<2) return
 
 let buy=data[0].sell_price_min
 let sell=data[1].buy_price_max
@@ -198,16 +224,21 @@ let profit=Math.floor(sell*0.935-buy)
 
 if(profit>0){
 
+let weight=item.Weight||1
+
 best.push({
-item,
-profit
+
+name:item.LocalizedNames?.["JA-JP"]||item.UniqueName,
+profit,
+ppkg:(profit/weight).toFixed(2)
+
 })
 
 }
 
 }catch(e){}
 
-}
+}))
 
 best.sort((a,b)=>b.profit-a.profit)
 
@@ -220,16 +251,14 @@ best.slice(0,20).forEach(b=>{
 table.innerHTML+=`
 
 <tr>
-<td>${b.item}</td>
+<td>${b.name}</td>
 <td style="color:lime">${b.profit}</td>
-<td>-</td>
-</tr>
-
-`
+<td>${b.ppkg}</td>
+</tr>`
 
 })
 
-document.getElementById("result").innerHTML="スキャン完了"
+document.getElementById("result").innerHTML="Black Market スキャン完了"
 
 }
 

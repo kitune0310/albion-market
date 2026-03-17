@@ -1,18 +1,61 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
 <meta charset="UTF-8">
 <title>Albion Market Analyzer AI PRO+</title>
-<link rel="stylesheet" href="style.css">
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{
+    background:
+    linear-gradient(rgba(0,0,0,0.85),rgba(0,0,0,0.95)),
+    url("https://images.albiononline.com/uploads/media/default/media/5e6e34c5d64e7.jpg");
+    background-size:cover;
+    background-attachment:fixed;
+    color:white;
+    font-family:Arial;
+    text-align:center;
+}
+
+h1{color:#ffd700}
+
+input,select,button{
+    padding:10px;
+    margin:5px;
+    border-radius:6px;
+    border:none;
+}
+
+button{
+    background:#ffd700;
+    cursor:pointer;
+}
+
+table{
+    margin:auto;
+    margin-top:20px;
+    border-collapse:collapse;
+    width:95%;
+    background:rgba(0,0,0,0.7);
+}
+
+th,td{
+    border:1px solid #444;
+    padding:8px;
+}
+
+canvas{
+    max-width:900px;
+    margin-top:40px;
+}
+</style>
+
 </head>
 
 <body>
 
 <h1>⚔ Albion Market Analyzer AI PRO+</h1>
-
-<div class="panel">
 
 <select id="server">
 <option value="east">Asia</option>
@@ -20,59 +63,222 @@
 <option value="europe">Europe</option>
 </select>
 
-<select id="tier">
-<option value="">All Tier</option>
-<option value="T4">T4</option>
-<option value="T5">T5</option>
-<option value="T6">T6</option>
-<option value="T7">T7</option>
-<option value="T8">T8</option>
-</select>
-
-</div>
-
 <input id="search" placeholder="アイテム検索">
-
 <br>
+
 <select id="items"></select>
 <br>
-<img id="itemIcon">
+
+<img id="itemIcon" width="80">
+
 <br>
-<input id="weight" placeholder="重量 kg" type="number">
-<input id="cargo" placeholder="運搬量 kg" type="number">
-<input id="minProfit" placeholder="最低利益">
+<input id="weight" placeholder="重量" type="number">
+<input id="cargo" placeholder="運搬量" type="number">
 
 <br>
 <button onclick="loadPrices()">市場分析</button>
-<button onclick="scanBlackMarket()">🏴 Black Market Scan</button>
-<button onclick="scanAllTrades()">🌍 全アイテムAIルート</button>
-
-<div id="result"></div>
 
 <h2 id="bestTrade"></h2>
 
-<h2>💰 BLACK MARKET BEST</h2>
-<table id="bestItems">
-<tr><th>アイテム</th><th>利益</th><th>利益/kg</th></tr>
-</table>
-
-<h2>🚚 AI 推奨 CARGO TRADES</h2>
-<table id="cargoTrades">
-<tr><th>アイテム</th><th>購入都市</th><th>販売都市</th><th>総利益</th><th>推奨マウント</th><th>危険ゾーン</th></tr>
-</table>
-
 <h2>都市価格</h2>
-<table id="priceTable">
-<tr><th>都市</th><th>最安購入</th><th>最高売却</th></tr>
-</table>
+<table id="priceTable"></table>
 
 <h2>トレード</h2>
-<table id="tradeTable">
-<tr><th>購入都市</th><th>販売都市</th><th>利益</th><th>利益/kg</th><th>総利益</th><th>ROI</th></tr>
-</table>
+<table id="tradeTable"></table>
 
+<h2>📊 現在価格</h2>
 <canvas id="priceChart"></canvas>
 
-<script src="script.js"></script>
+<h2>📈 価格履歴（時間推移）</h2>
+<canvas id="historyChart"></canvas>
+
+<script>
+
+// =========================
+// 変数
+// =========================
+let itemList=[]
+let priceChart=null
+let historyChart=null
+
+const cities=["Bridgewatch","Martlock","Lymhurst","Fort Sterling","Thetford","Caerleon","Black Market"]
+
+// =========================
+// アイテム取得
+// =========================
+async function loadItems(){
+    let res=await fetch("https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.json")
+    itemList=await res.json()
+}
+loadItems()
+
+// =========================
+// 検索
+// =========================
+document.getElementById("search").addEventListener("input",()=>{
+
+    let text=document.getElementById("search").value.toLowerCase()
+    let select=document.getElementById("items")
+    select.innerHTML=""
+
+    itemList.forEach(item=>{
+        if(!item.LocalizedNames) return
+        let name=item.LocalizedNames["JA-JP"]||""
+
+        if(name.toLowerCase().includes(text)){
+            let op=document.createElement("option")
+            op.value=item.UniqueName
+            op.text=name
+            select.appendChild(op)
+        }
+    })
+})
+
+// =========================
+// メイン分析
+// =========================
+async function loadPrices(){
+
+    let item=document.getElementById("items").value
+    if(!item) return
+
+    document.getElementById("itemIcon").src=
+    "https://render.albiononline.com/v1/item/"+item+".png"
+
+    let server=document.getElementById("server").value
+
+    let url=`https://${server}.albion-online-data.com/api/v2/stats/prices/${item}?locations=${cities.join(",")}`
+
+    let res=await fetch(url)
+    let data=await res.json()
+
+    let market={}
+    cities.forEach(c=>market[c]={sell:999999999,buy:0})
+
+    data.forEach(d=>{
+        if(d.sell_price_min>0 && d.sell_price_min<market[d.city].sell){
+            market[d.city].sell=d.sell_price_min
+        }
+        if(d.buy_price_max>market[d.city].buy){
+            market[d.city].buy=d.buy_price_max
+        }
+    })
+
+    drawChart(market)
+    drawTable(market)
+    calcTrades(market)
+
+    loadHistory() // ← 履歴も呼ぶ
+}
+
+// =========================
+// 現在価格グラフ
+// =========================
+function drawChart(market){
+
+    let labels=[],buy=[],sell=[],profit=[]
+
+    for(let c in market){
+        labels.push(c)
+        let b=market[c].sell
+        let s=market[c].buy
+        buy.push(b)
+        sell.push(s)
+        profit.push(s-b)
+    }
+
+    let ctx=document.getElementById("priceChart")
+
+    if(priceChart) priceChart.destroy()
+
+    priceChart=new Chart(ctx,{
+        data:{
+            labels:labels,
+            datasets:[
+                {type:"bar",label:"最安購入",data:buy,backgroundColor:"cyan"},
+                {type:"line",label:"最高売却",data:sell,borderColor:"orange"},
+                {type:"line",label:"利益",data:profit,borderColor:"lime"}
+            ]
+        }
+    })
+}
+
+// =========================
+// テーブル
+// =========================
+function drawTable(market){
+
+    let t=document.getElementById("priceTable")
+    t.innerHTML="<tr><th>都市</th><th>買</th><th>売</th></tr>"
+
+    for(let c in market){
+        t.innerHTML+=`<tr><td>${c}</td><td>${market[c].sell}</td><td>${market[c].buy}</td></tr>`
+    }
+}
+
+// =========================
+// トレード
+// =========================
+function calcTrades(market){
+
+    let table=document.getElementById("tradeTable")
+    table.innerHTML="<tr><th>買</th><th>売</th><th>利益</th></tr>"
+
+    for(let b in market){
+        for(let s in market){
+            if(b===s) continue
+
+            let profit=Math.floor(market[s].buy*0.935 - market[b].sell)
+
+            if(profit>0){
+                table.innerHTML+=`<tr><td>${b}</td><td>${s}</td><td>${profit}</td></tr>`
+            }
+        }
+    }
+}
+
+// =========================
+// 履歴グラフ
+// =========================
+async function loadHistory(){
+
+    let item=document.getElementById("items").value
+    let server=document.getElementById("server").value
+
+    let url=`https://${server}.albion-online-data.com/api/v2/stats/history/${item}?locations=Caerleon&time-scale=1`
+
+    let res=await fetch(url)
+    let data=await res.json()
+
+    if(!data.length || !data[0].data) return
+
+    let history=data[0].data
+
+    let labels=[],avg=[],sell=[]
+
+    history.forEach(h=>{
+        labels.push(new Date(h.timestamp).toLocaleTimeString())
+        avg.push(h.avg_price)
+        sell.push(h.sell_price_min)
+    })
+
+    let ctx=document.getElementById("historyChart")
+
+    if(historyChart) historyChart.destroy()
+
+    historyChart=new Chart(ctx,{
+        type:"line",
+        data:{
+            labels:labels,
+            datasets:[
+                {label:"平均価格",data:avg,borderColor:"cyan"},
+                {label:"最安売り",data:sell,borderColor:"orange"}
+            ]
+        }
+    })
+}
+
+</script>
+
 </body>
 </html>

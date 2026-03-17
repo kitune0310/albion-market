@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -50,7 +49,6 @@ canvas{
     margin-top:40px;
 }
 </style>
-
 </head>
 
 <body>
@@ -75,7 +73,8 @@ canvas{
 <input id="search" placeholder="アイテム検索">
 <br>
 
-<select id="items"></select> <br>
+<select id="items"></select>
+<br>
 
 <img id="itemIcon" width="80">
 
@@ -117,7 +116,7 @@ const mounts=[
 ]
 
 // =========================
-// アイテム
+// アイテム読み込み
 // =========================
 async function loadItems(){
     let res=await fetch("https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.json")
@@ -203,9 +202,9 @@ function drawChart(market){
         labels.push(c)
         let b=market[c].sell
         let s=market[c].buy
-        buy.push(b)
-        sell.push(s)
-        profit.push(s-b)
+        buy.push(b===999999999 ? null : b)
+        sell.push(s===0 ? null : s)
+        profit.push((b===999999999 || s===0) ? null : s-b)
     }
 
     let ctx=document.getElementById("priceChart")
@@ -232,12 +231,14 @@ function drawTable(market){
     t.innerHTML="<tr><th>都市</th><th>買</th><th>売</th></tr>"
 
     for(let c in market){
-        t.innerHTML+=`<tr><td>${c}</td><td>${market[c].sell}</td><td>${market[c].buy}</td></tr>`
+        let sellDisplay = market[c].sell === 999999999 ? "-" : market[c].sell
+        let buyDisplay  = market[c].buy === 0 ? "-" : market[c].buy
+        t.innerHTML+=`<tr><td>${c}</td><td>${sellDisplay}</td><td>${buyDisplay}</td></tr>`
     }
 }
 
 // =========================
-// トレード
+// トレード計算
 // =========================
 function calculateTrades(market,weight,cargo){
 

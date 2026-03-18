@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Albion Market Analyzer AI ULTIMATE+</title>
+<title>Albion Market Analyzer AI ULTIMATE++</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -60,16 +60,14 @@ canvas{
 
 <body>
 
-<h1>⚔ Albion Market Analyzer AI ULTIMATE+</h1>
+<h1>⚔ Albion Market Analyzer AI ULTIMATE++</h1>
 
-<!-- サーバー -->
 <select id="server">
 <option value="east">Asia</option>
 <option value="west">America</option>
 <option value="europe">Europe</option>
 </select>
 
-<!-- Tier -->
 <select id="tier">
 <option value="">全Tier</option>
 <option value="T4">T4</option>
@@ -89,18 +87,14 @@ canvas{
 
 <br>
 
-<!-- 🔥 追加：税率 -->
 <input id="tax" type="number" value="6.5" step="0.1"> % 税率
-
 <br>
 
-<!-- 🔥 追加：重量 -->
 <input id="weight" placeholder="重量" type="number">
 <input id="cargo" placeholder="運搬量" type="number">
 
 <br>
 
-<!-- 🔥 追加：都市フィルター -->
 <h3>都市選択</h3>
 <div id="cityFilter"></div>
 
@@ -119,15 +113,19 @@ canvas{
 <h2>📊 現在価格</h2>
 <canvas id="priceChart"></canvas>
 
+<h2>📈 価格履歴（平均価格）</h2>
+<canvas id="historyChart"></canvas>
+
 <script>
 
 let itemList = [];
 let priceChart = null;
+let historyChart = null;
 
 const allCities=["Bridgewatch","Martlock","Lymhurst","Fort Sterling","Thetford","Caerleon","Black Market"];
 
 // =========================
-// 都市チェック生成
+// 都市チェック
 // =========================
 function createCityFilter(){
     let div = document.getElementById("cityFilter");
@@ -138,7 +136,7 @@ function createCityFilter(){
 createCityFilter();
 
 // =========================
-// アイテム
+// アイテム読み込み
 // =========================
 async function loadItems(){
     let res = await fetch("https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.json");
@@ -187,7 +185,6 @@ async function loadPrices(){
     let cargo = parseFloat(document.getElementById("cargo").value||800);
     let tax = parseFloat(document.getElementById("tax").value||6.5)/100;
 
-    // 🔥 選択都市
     let cities = [...document.querySelectorAll("#cityFilter input:checked")]
     .map(c=>c.value);
 
@@ -214,11 +211,14 @@ async function loadPrices(){
     drawTable(market);
     calculateTrades(market, weight, cargo, tax);
 
+    // 🔥 履歴読み込み
+    await loadHistory(item, server, cities);
+
     document.getElementById("result").innerHTML = "AI分析完了";
 }
 
 // =========================
-// チャート
+// 現在価格チャート
 // =========================
 function drawChart(market){
     let labels=[],buy=[],sell=[],profit=[];
@@ -267,7 +267,7 @@ function drawTable(market){
 }
 
 // =========================
-// トレード
+// トレード計算
 // =========================
 function calculateTrades(market, weight, cargo, tax){
     let trades = [];
@@ -312,6 +312,79 @@ function calculateTrades(market, weight, cargo, tax){
         document.getElementById("bestTrade").innerHTML =
         `🔥 BEST: ${best.b} → ${best.s} / 利益 ${best.cargoProfit}`;
     }
+}
+
+// =========================
+// 🔥 履歴 + 平均価格 + MA
+// =========================
+async function loadHistory(item, server, cities){
+
+    let url = `https://${server}.albion-online-data.com/api/v2/stats/history/${item}?locations=${cities.join(",")}&time-scale=24`;
+
+    let res = await fetch(url);
+    let data = await res.json();
+
+    if(!data.length){
+        alert("履歴データなし");
+        return;
+    }
+
+    let map = {};
+
+    data.forEach(city=>{
+        if(!city.data) return;
+
+        city.data.forEach(d=>{
+            let t = d.timestamp;
+
+            if(!map[t]){
+                map[t] = {sum:0,count:0};
+            }
+
+            map[t].sum += d.avg_price;
+            map[t].count++;
+        });
+    });
+
+    let labels=[],avg=[];
+
+    Object.keys(map).sort().forEach(t=>{
+        labels.push(new Date(t).toLocaleDateString("ja-JP"));
+        avg.push(map[t].sum / map[t].count);
+    });
+
+    // 移動平均
+    let ma=[];
+    let period=7;
+
+    for(let i=0;i<avg.length;i++){
+        if(i<period-1){
+            ma.push(null);
+        }else{
+            let sum=0;
+            for(let j=i-period+1;j<=i;j++) sum+=avg[j];
+            ma.push(sum/period);
+        }
+    }
+
+    let trend = avg[avg.length-1] - avg[0];
+    let text = trend>0 ? "📈 上昇トレンド（買い）" : "📉 下落トレンド（注意）";
+    document.getElementById("aiAdvice").innerHTML += "<br>"+text;
+
+    let ctx = document.getElementById("historyChart");
+
+    if(historyChart) historyChart.destroy();
+
+    historyChart = new Chart(ctx,{
+        type:"line",
+        data:{
+            labels: labels,
+            datasets:[
+                {label:"平均価格", data:avg, borderColor:"cyan", tension:0.2},
+                {label:"7日移動平均", data:ma, borderColor:"orange", borderDash:[5,5], tension:0.2}
+            ]
+        }
+    });
 }
 
 </script>

@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Albion Market Analyzer AI ULTIMATE++</title>
+<title>Albion Market Analyzer Guild Edition</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 body{
@@ -50,7 +50,7 @@ canvas{
 </head>
 <body>
 
-<h1>⚔ Albion Market Analyzer AI ULTIMATE++</h1>
+<h1>⚔ Albion Market Analyzer Guild Edition</h1>
 
 <select id="server">
 <option value="east">Asia</option>
@@ -98,6 +98,9 @@ canvas{
 <h2>トレード</h2>
 <table id="tradeTable"></table>
 
+<h2>📝 ギルドタスク管理</h2>
+<table id="taskTable"></table>
+
 <h2>📊 現在価格</h2>
 <canvas id="priceChart"></canvas>
 
@@ -108,6 +111,7 @@ canvas{
 let itemList = [];
 let priceChart = null;
 let historyChart = null;
+let tasks = [];
 const allCities=["Bridgewatch","Martlock","Lymhurst","Fort Sterling","Thetford","Caerleon","Black Market"];
 
 // =========================
@@ -197,6 +201,7 @@ async function loadPrices(){
     drawChart(market);
     drawTable(market);
     let trades = calculateTrades(market, weight, cargo, tax);
+    generateTasks(trades); // タスク生成
     await loadHistory(item, server, cities);
     generateAIAdvice(trades);
     document.getElementById("result").innerHTML = "✅ AI分析完了";
@@ -284,6 +289,54 @@ function calculateTrades(market, weight, cargo, tax){
 }
 
 // =========================
+// タスク管理
+// =========================
+function generateTasks(trades){
+    tasks = trades.slice(0,10).map(t => ({
+        route: `${t.b} → ${t.s}`,
+        assigned: "未割当",
+        status: "未開始",
+        profit: t.cargoProfit
+    }));
+    drawTaskTable();
+}
+
+function drawTaskTable(){
+    let table = document.getElementById("taskTable");
+    table.innerHTML = "<tr><th>ルート</th><th>担当</th><th>利益</th><th>状態</th></tr>";
+    tasks.forEach((task,i)=>{
+        table.innerHTML += `
+        <tr>
+            <td>${task.route}</td>
+            <td>
+                <select onchange="assignTask(${i},this.value)">
+                    <option>未割当</option>
+                    <option>Alice</option>
+                    <option>Bob</option>
+                    <option>Charlie</option>
+                </select>
+            </td>
+            <td>${task.profit}</td>
+            <td>
+                <select onchange="updateStatus(${i},this.value)">
+                    <option>未開始</option>
+                    <option>進行中</option>
+                    <option>完了</option>
+                </select>
+            </td>
+        </tr>`;
+    });
+}
+
+function assignTask(index,name){
+    tasks[index].assigned = name;
+}
+
+function updateStatus(index,status){
+    tasks[index].status = status;
+}
+
+// =========================
 // AIアドバイス
 // =========================
 function generateAIAdvice(trades){
@@ -294,12 +347,9 @@ function generateAIAdvice(trades){
     let best = trades[0];
     let trendText = document.getElementById("aiAdvice").innerHTML || "";
     let advice = "";
-
-    // 簡易フリップ判定
     if(best.profit > 0 && best.roi>15) advice = "🚀 高ROI！即チェック！";
     else if(best.roi>10) advice = "📈 ROIそこそこ、注意して運搬";
     else advice = "⚠ 利益低め、見送りも検討";
-
     document.getElementById("aiAdvice").innerHTML = trendText + "<br>" + advice;
 }
 
@@ -310,10 +360,7 @@ async function loadHistory(item, server, cities){
     let url = `https://${server}.albion-online-data.com/api/v2/stats/history/${item}?locations=${cities.join(",")}&time-scale=24`;
     let res = await fetch(url);
     let data = await res.json();
-    if(!data.length){
-        console.log("履歴データなし");
-        return;
-    }
+    if(!data.length) return;
 
     let map = {};
     data.forEach(city=>{

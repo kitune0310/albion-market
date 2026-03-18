@@ -3,9 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Albion Market Analyzer AI ULTIMATE++</title>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
 body{
     background:
@@ -16,21 +14,17 @@ body{
     font-family:Arial;
     text-align:center;
 }
-
 h1{color:#ffd700}
-
 input,select,button{
     padding:10px;
     margin:5px;
     border-radius:6px;
     border:none;
 }
-
 button{
     background:#ffd700;
     cursor:pointer;
 }
-
 table{
     margin:auto;
     margin-top:20px;
@@ -38,18 +32,15 @@ table{
     width:95%;
     background:rgba(0,0,0,0.7);
 }
-
 th,td{
     border:1px solid #444;
     padding:8px;
 }
-
 canvas{
     max-width:900px;
     margin-top:40px;
     width:100%;
 }
-
 .bm{
     background:rgba(255,0,0,0.3);
     color:#ffd700;
@@ -57,7 +48,6 @@ canvas{
 }
 </style>
 </head>
-
 <body>
 
 <h1>⚔ Albion Market Analyzer AI ULTIMATE++</h1>
@@ -84,7 +74,6 @@ canvas{
 <br>
 
 <img id="itemIcon" width="80">
-
 <br>
 
 <input id="tax" type="number" value="6.5" step="0.1"> % 税率
@@ -92,7 +81,6 @@ canvas{
 
 <input id="weight" placeholder="重量" type="number">
 <input id="cargo" placeholder="運搬量" type="number">
-
 <br>
 
 <h3>都市選択</h3>
@@ -117,11 +105,9 @@ canvas{
 <canvas id="historyChart"></canvas>
 
 <script>
-
 let itemList = [];
 let priceChart = null;
 let historyChart = null;
-
 const allCities=["Bridgewatch","Martlock","Lymhurst","Fort Sterling","Thetford","Caerleon","Black Market"];
 
 // =========================
@@ -150,15 +136,11 @@ function searchItem(){
     let text = document.getElementById("search").value.toLowerCase();
     let tier = document.getElementById("tier").value;
     let select = document.getElementById("items");
-
     select.innerHTML = "";
-
     itemList.forEach(item=>{
         if(!item.LocalizedNames) return;
         let name = item.LocalizedNames["JA-JP"]||"";
-
         if(tier && !item.UniqueName.startsWith(tier)) return;
-
         if(name.toLowerCase().includes(text)){
             let op = document.createElement("option");
             op.value = item.UniqueName;
@@ -172,28 +154,33 @@ function searchItem(){
 // メイン
 // =========================
 async function loadPrices(){
-
     let item = document.getElementById("items").value;
     if(!item) return;
 
-    document.getElementById("result").innerHTML = "AI分析中...";
-
+    document.getElementById("result").innerHTML = "⏳ AI分析中...";
     document.getElementById("itemIcon").src =
-    "https://render.albiononline.com/v1/item/"+item+".png";
+        "https://render.albiononline.com/v1/item/"+item+".png";
 
     let weight = parseFloat(document.getElementById("weight").value||1);
     let cargo = parseFloat(document.getElementById("cargo").value||800);
     let tax = parseFloat(document.getElementById("tax").value||6.5)/100;
 
     let cities = [...document.querySelectorAll("#cityFilter input:checked")]
-    .map(c=>c.value);
-
+        .map(c=>c.value);
     let server = document.getElementById("server").value;
 
-    let url = `https://${server}.albion-online-data.com/api/v2/stats/prices/${item}?locations=${cities.join(",")}`;
-
-    let res = await fetch(url);
-    let data = await res.json();
+    // キャッシュ確認
+    let cacheKey = server+"_"+item+"_"+cities.join(",");
+    let cached = localStorage.getItem(cacheKey);
+    let data;
+    if(cached){
+        data = JSON.parse(cached);
+    } else {
+        let url = `https://${server}.albion-online-data.com/api/v2/stats/prices/${item}?locations=${cities.join(",")}`;
+        let res = await fetch(url);
+        data = await res.json();
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+    }
 
     let market = {};
     cities.forEach(c=>market[c]={sell:999999999,buy:0});
@@ -209,12 +196,10 @@ async function loadPrices(){
 
     drawChart(market);
     drawTable(market);
-    calculateTrades(market, weight, cargo, tax);
-
-    // 🔥 履歴読み込み
+    let trades = calculateTrades(market, weight, cargo, tax);
     await loadHistory(item, server, cities);
-
-    document.getElementById("result").innerHTML = "AI分析完了";
+    generateAIAdvice(trades);
+    document.getElementById("result").innerHTML = "✅ AI分析完了";
 }
 
 // =========================
@@ -222,21 +207,16 @@ async function loadPrices(){
 // =========================
 function drawChart(market){
     let labels=[],buy=[],sell=[],profit=[];
-
     for(let c in market){
         labels.push(c);
         let b = market[c].sell;
         let s = market[c].buy;
-
         buy.push(b===999999999 ? null : b);
         sell.push(s===0 ? null : s);
         profit.push((b===999999999 || s===0) ? null : s-b);
     }
-
     let ctx = document.getElementById("priceChart");
-
     if(priceChart) priceChart.destroy();
-
     priceChart = new Chart(ctx,{
         data:{
             labels: labels,
@@ -255,13 +235,10 @@ function drawChart(market){
 function drawTable(market){
     let t = document.getElementById("priceTable");
     t.innerHTML = "<tr><th>都市</th><th>買</th><th>売</th></tr>";
-
     for(let c in market){
         let sellDisplay = market[c].sell === 999999999 ? "-" : market[c].sell;
         let buyDisplay  = market[c].buy === 0 ? "-" : market[c].buy;
-
         let cls = c==="Black Market" ? "class='bm'" : "";
-
         t.innerHTML += `<tr ${cls}><td>${c}</td><td>${sellDisplay}</td><td>${buyDisplay}</td></tr>`;
     }
 }
@@ -271,32 +248,24 @@ function drawTable(market){
 // =========================
 function calculateTrades(market, weight, cargo, tax){
     let trades = [];
-
     for(let b in market){
         for(let s in market){
             if(b===s) continue;
-
             let buy = market[b].sell;
             let sell = market[s].buy;
-
             if(buy==999999999 || sell==0) continue;
-
             let profit = Math.floor(sell*(1-tax) - buy);
             let cargoProfit = Math.floor((cargo/weight)*profit);
             let roi = ((profit/buy)*100).toFixed(1);
-
             trades.push({b,s,profit,cargoProfit,roi});
         }
     }
-
     trades.sort((a,b)=>b.cargoProfit - a.cargoProfit);
 
     let table = document.getElementById("tradeTable");
     table.innerHTML="<tr><th>購入</th><th>販売</th><th>利益</th><th>総利益</th><th>ROI</th></tr>";
-
     trades.slice(0,20).forEach(t=>{
         let cls = t.s==="Black Market" ? "class='bm'" : "";
-
         table.innerHTML += `
         <tr ${cls}>
             <td>${t.b}</td>
@@ -306,61 +275,68 @@ function calculateTrades(market, weight, cargo, tax){
             <td>${t.roi}%</td>
         </tr>`;
     });
-
     if(trades.length){
         let best = trades[0];
         document.getElementById("bestTrade").innerHTML =
         `🔥 BEST: ${best.b} → ${best.s} / 利益 ${best.cargoProfit}`;
     }
+    return trades;
 }
 
 // =========================
-// 🔥 履歴 + 平均価格 + MA
+// AIアドバイス
+// =========================
+function generateAIAdvice(trades){
+    if(!trades.length){
+        document.getElementById("aiAdvice").innerHTML = "データ不足";
+        return;
+    }
+    let best = trades[0];
+    let trendText = document.getElementById("aiAdvice").innerHTML || "";
+    let advice = "";
+
+    // 簡易フリップ判定
+    if(best.profit > 0 && best.roi>15) advice = "🚀 高ROI！即チェック！";
+    else if(best.roi>10) advice = "📈 ROIそこそこ、注意して運搬";
+    else advice = "⚠ 利益低め、見送りも検討";
+
+    document.getElementById("aiAdvice").innerHTML = trendText + "<br>" + advice;
+}
+
+// =========================
+// 履歴
 // =========================
 async function loadHistory(item, server, cities){
-
     let url = `https://${server}.albion-online-data.com/api/v2/stats/history/${item}?locations=${cities.join(",")}&time-scale=24`;
-
     let res = await fetch(url);
     let data = await res.json();
-
     if(!data.length){
-        alert("履歴データなし");
+        console.log("履歴データなし");
         return;
     }
 
     let map = {};
-
     data.forEach(city=>{
         if(!city.data) return;
-
         city.data.forEach(d=>{
             let t = d.timestamp;
-
-            if(!map[t]){
-                map[t] = {sum:0,count:0};
-            }
-
+            if(!map[t]) map[t]={sum:0,count:0};
             map[t].sum += d.avg_price;
             map[t].count++;
         });
     });
 
     let labels=[],avg=[];
-
     Object.keys(map).sort().forEach(t=>{
         labels.push(new Date(t).toLocaleDateString("ja-JP"));
         avg.push(map[t].sum / map[t].count);
     });
 
-    // 移動平均
     let ma=[];
     let period=7;
-
     for(let i=0;i<avg.length;i++){
-        if(i<period-1){
-            ma.push(null);
-        }else{
+        if(i<period-1) ma.push(null);
+        else{
             let sum=0;
             for(let j=i-period+1;j<=i;j++) sum+=avg[j];
             ma.push(sum/period);
@@ -369,12 +345,10 @@ async function loadHistory(item, server, cities){
 
     let trend = avg[avg.length-1] - avg[0];
     let text = trend>0 ? "📈 上昇トレンド（買い）" : "📉 下落トレンド（注意）";
-    document.getElementById("aiAdvice").innerHTML += "<br>"+text;
+    document.getElementById("aiAdvice").innerHTML = text;
 
     let ctx = document.getElementById("historyChart");
-
     if(historyChart) historyChart.destroy();
-
     historyChart = new Chart(ctx,{
         type:"line",
         data:{
@@ -386,8 +360,6 @@ async function loadHistory(item, server, cities){
         }
     });
 }
-
 </script>
-
 </body>
 </html>

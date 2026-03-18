@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Albion Market Analyzer Guild Edition</title>
+<title>Albion Market Analyzer Guild Edition MA</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 body{
@@ -50,7 +50,7 @@ canvas{
 </head>
 <body>
 
-<h1>⚔ Albion Market Analyzer Guild Edition</h1>
+<h1>⚔ Albion Market Analyzer Guild Edition MA</h1>
 
 <select id="server">
 <option value="east">Asia</option>
@@ -104,7 +104,7 @@ canvas{
 <h2>📊 現在価格</h2>
 <canvas id="priceChart"></canvas>
 
-<h2>📈 価格履歴（平均価格）</h2>
+<h2>📈 価格履歴（平均価格＋短期/長期MA）</h2>
 <canvas id="historyChart"></canvas>
 
 <script>
@@ -173,18 +173,9 @@ async function loadPrices(){
         .map(c=>c.value);
     let server = document.getElementById("server").value;
 
-    // キャッシュ確認
-    let cacheKey = server+"_"+item+"_"+cities.join(",");
-    let cached = localStorage.getItem(cacheKey);
-    let data;
-    if(cached){
-        data = JSON.parse(cached);
-    } else {
-        let url = `https://${server}.albion-online-data.com/api/v2/stats/prices/${item}?locations=${cities.join(",")}`;
-        let res = await fetch(url);
-        data = await res.json();
-        localStorage.setItem(cacheKey, JSON.stringify(data));
-    }
+    let url = `https://${server}.albion-online-data.com/api/v2/stats/prices/${item}?locations=${cities.join(",")}`;
+    let res = await fetch(url);
+    let data = await res.json();
 
     let market = {};
     cities.forEach(c=>market[c]={sell:999999999,buy:0});
@@ -201,8 +192,8 @@ async function loadPrices(){
     drawChart(market);
     drawTable(market);
     let trades = calculateTrades(market, weight, cargo, tax);
-    generateTasks(trades); // タスク生成
-    await loadHistory(item, server, cities);
+    generateTasks(trades); 
+    await loadHistoryMA(item, server, cities); // 移動平均読み込み
     generateAIAdvice(trades);
     document.getElementById("result").innerHTML = "✅ AI分析完了";
 }
@@ -345,19 +336,17 @@ function generateAIAdvice(trades){
         return;
     }
     let best = trades[0];
-    let trendText = document.getElementById("aiAdvice").innerHTML || "";
-    let advice = "";
-    if(best.profit > 0 && best.roi>15) advice = "🚀 高ROI！即チェック！";
-    else if(best.roi>10) advice = "📈 ROIそこそこ、注意して運搬";
-    else advice = "⚠ 利益低め、見送りも検討";
-    document.getElementById("aiAdvice").innerHTML = trendText + "<br>" + advice;
+    let advice = best.profit>0 && best.roi>15 ? "🚀 高ROI！即チェック！"
+                 : best.roi>10 ? "📈 ROIそこそこ、注意して運搬"
+                 : "⚠ 利益低め、見送りも検討";
+    document.getElementById("aiAdvice").innerHTML = advice;
 }
 
 // =========================
-// 履歴
+// 履歴 + 短期/長期移動平均
 // =========================
-async function loadHistory(item, server, cities){
-    let url = `https://${server}.albion-online-data.com/api/v2/stats/history/${item}?locations=${cities.join(",")}&time-scale=24`;
+async function loadHistoryMA(item, server, cities){
+    let url = `https://${server}.albion-online-data.com/api/v2/stats/history/${item}?locations=${cities.join(",")}&time-scale=1`;
     let res = await fetch(url);
     let data = await res.json();
     if(!data.length) return;
@@ -375,24 +364,25 @@ async function loadHistory(item, server, cities){
 
     let labels=[],avg=[];
     Object.keys(map).sort().forEach(t=>{
-        labels.push(new Date(t).toLocaleDateString("ja-JP"));
+        labels.push(new Date(t).toLocaleDateString("ja-JP")+" "+new Date(t).toLocaleTimeString());
         avg.push(map[t].sum / map[t].count);
     });
 
-    let ma=[];
-    let period=7;
+    // 短期MA 3期間
+    let maShort = [];
+    let periodShort = 3;
     for(let i=0;i<avg.length;i++){
-        if(i<period-1) ma.push(null);
-        else{
-            let sum=0;
-            for(let j=i-period+1;j<=i;j++) sum+=avg[j];
-            ma.push(sum/period);
-        }
+        if(i<periodShort-1) maShort.push(null);
+        else maShort.push(avg.slice(i-periodShort+1,i+1).reduce((a,b)=>a+b,0)/periodShort);
     }
 
-    let trend = avg[avg.length-1] - avg[0];
-    let text = trend>0 ? "📈 上昇トレンド（買い）" : "📉 下落トレンド（注意）";
-    document.getElementById("aiAdvice").innerHTML = text;
+    // 長期MA 7期間
+    let maLong = [];
+    let periodLong = 7;
+    for(let i=0;i<avg.length;i++){
+        if(i<periodLong-1) maLong.push(null);
+        else maLong.push(avg.slice(i-periodLong+1,i+1).reduce((a,b)=>a+b,0)/periodLong);
+    }
 
     let ctx = document.getElementById("historyChart");
     if(historyChart) historyChart.destroy();
@@ -402,8 +392,14 @@ async function loadHistory(item, server, cities){
             labels: labels,
             datasets:[
                 {label:"平均価格", data:avg, borderColor:"cyan", tension:0.2},
-                {label:"7日移動平均", data:ma, borderColor:"orange", borderDash:[5,5], tension:0.2}
+                {label:"短期MA(3)", data:maShort, borderColor:"lime", borderDash:[5,5], tension:0.2},
+                {label:"長期MA(7)", data:maLong, borderColor:"orange", borderDash:[5,5], tension:0.2}
             ]
+        },
+        options:{
+            scales:{
+                x:{ticks:{maxTicksLimit:20}}
+            }
         }
     });
 }

@@ -2,28 +2,65 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Albion Market AI PRO TRADER</title>
+<title>Albion Market Analyzer AI ULTIMATE++</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
-    background:linear-gradient(rgba(0,0,0,0.9),rgba(0,0,0,0.95));
+    background:
+    linear-gradient(rgba(0,0,0,0.85),rgba(0,0,0,0.95)),
+    url("https://images.albiononline.com/uploads/media/default/media/5e6e34c5d64e7.jpg");
+    background-size:cover;
     color:white;
     font-family:Arial;
     text-align:center;
 }
+
 h1{color:#ffd700}
-input,select,button{padding:8px;margin:5px;border-radius:6px;border:none;}
-button{background:#ffd700;cursor:pointer;}
-canvas{max-width:1000px;margin-top:30px;}
-.bm{background:rgba(255,0,0,0.3);}
+
+input,select,button{
+    padding:10px;
+    margin:5px;
+    border-radius:6px;
+    border:none;
+}
+
+button{
+    background:#ffd700;
+    cursor:pointer;
+}
+
+table{
+    margin:auto;
+    margin-top:20px;
+    border-collapse:collapse;
+    width:95%;
+    background:rgba(0,0,0,0.7);
+}
+
+th,td{
+    border:1px solid #444;
+    padding:8px;
+}
+
+canvas{
+    max-width:900px;
+    margin-top:40px;
+    width:100%;
+}
+
+.bm{
+    background:rgba(255,0,0,0.3);
+    color:#ffd700;
+    font-weight:bold;
+}
 </style>
 </head>
 
 <body>
 
-<h1>⚔ Albion Market AI PRO TRADER</h1>
+<h1>⚔ Albion Market Analyzer AI ULTIMATE++</h1>
 
 <select id="server">
 <option value="east">Asia</option>
@@ -31,210 +68,323 @@ canvas{max-width:1000px;margin-top:30px;}
 <option value="europe">Europe</option>
 </select>
 
+<select id="tier">
+<option value="">全Tier</option>
+<option value="T4">T4</option>
+<option value="T5">T5</option>
+<option value="T6">T6</option>
+<option value="T7">T7</option>
+<option value="T8">T8</option>
+</select>
+
 <input id="search" placeholder="アイテム検索">
-<select id="items"></select><br>
+<br>
 
-<input id="tax" type="number" value="6.5">税%
-<input id="weight" placeholder="重量">
-<input id="cargo" placeholder="運搬量"><br>
+<select id="items"></select>
+<br>
 
+<img id="itemIcon" width="80">
+
+<br>
+
+<input id="tax" type="number" value="6.5" step="0.1"> % 税率
+<br>
+
+<input id="weight" placeholder="重量" type="number">
+<input id="cargo" placeholder="運搬量" type="number">
+
+<br>
+
+<h3>都市選択</h3>
 <div id="cityFilter"></div>
 
-<button onclick="loadPrices()">分析</button>
+<button onclick="loadPrices()">市場分析</button>
 
-<h2 id="aiAdvice"></h2>
+<h2 id="bestTrade"></h2>
+<h3 id="aiAdvice"></h3>
+<div id="result"></div>
 
+<h2>都市価格</h2>
+<table id="priceTable"></table>
+
+<h2>トレード</h2>
+<table id="tradeTable"></table>
+
+<h2>📊 現在価格</h2>
 <canvas id="priceChart"></canvas>
+
+<h2>📈 価格履歴（平均価格）</h2>
 <canvas id="historyChart"></canvas>
 
 <script>
 
-let itemList=[];
-let historyChart=null;
-let priceChart=null;
+let itemList = [];
+let priceChart = null;
+let historyChart = null;
 
-const cities=["Bridgewatch","Martlock","Lymhurst","Fort Sterling","Thetford","Caerleon","Black Market"];
+const allCities=["Bridgewatch","Martlock","Lymhurst","Fort Sterling","Thetford","Caerleon","Black Market"];
 
+// =========================
 // 都市チェック
-cities.forEach(c=>{
- document.getElementById("cityFilter").innerHTML+=
- `<label><input type="checkbox" value="${c}" checked>${c}</label>`;
-});
+// =========================
+function createCityFilter(){
+    let div = document.getElementById("cityFilter");
+    allCities.forEach(c=>{
+        div.innerHTML += `<label><input type="checkbox" value="${c}" checked> ${c}</label>`;
+    });
+}
+createCityFilter();
 
-// アイテム
-fetch("https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.json")
-.then(r=>r.json()).then(d=>itemList=d);
+// =========================
+// アイテム読み込み
+// =========================
+async function loadItems(){
+    let res = await fetch("https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.json");
+    itemList = await res.json();
+}
+loadItems();
 
-document.getElementById("search").addEventListener("input",()=>{
- let s=document.getElementById("search").value.toLowerCase();
- let sel=document.getElementById("items");
- sel.innerHTML="";
- itemList.forEach(i=>{
-  if(!i.LocalizedNames) return;
-  let n=i.LocalizedNames["JA-JP"]||"";
-  if(n.toLowerCase().includes(s)){
-   let op=document.createElement("option");
-   op.value=i.UniqueName;
-   op.text=n;
-   sel.appendChild(op);
-  }
- });
-});
+document.getElementById("search").addEventListener("input", searchItem);
 
+function searchItem(){
+    let text = document.getElementById("search").value.toLowerCase();
+    let tier = document.getElementById("tier").value;
+    let select = document.getElementById("items");
+
+    select.innerHTML = "";
+
+    itemList.forEach(item=>{
+        if(!item.LocalizedNames) return;
+        let name = item.LocalizedNames["JA-JP"]||"";
+
+        if(tier && !item.UniqueName.startsWith(tier)) return;
+
+        if(name.toLowerCase().includes(text)){
+            let op = document.createElement("option");
+            op.value = item.UniqueName;
+            op.text = name;
+            select.appendChild(op);
+        }
+    });
+}
+
+// =========================
 // メイン
+// =========================
 async function loadPrices(){
 
-let item=document.getElementById("items").value;
-let server=document.getElementById("server").value;
-let tax=document.getElementById("tax").value/100;
+    let item = document.getElementById("items").value;
+    if(!item) return;
 
-let selected=[...document.querySelectorAll("#cityFilter input:checked")].map(c=>c.value);
+    document.getElementById("result").innerHTML = "AI分析中...";
 
-// 現在価格
-let res=await fetch(`https://${server}.albion-online-data.com/api/v2/stats/prices/${item}?locations=${selected}`);
-let data=await res.json();
+    document.getElementById("itemIcon").src =
+    "https://render.albiononline.com/v1/item/"+item+".png";
 
-let market={};
-selected.forEach(c=>market[c]={sell:999999999,buy:0});
+    let weight = parseFloat(document.getElementById("weight").value||1);
+    let cargo = parseFloat(document.getElementById("cargo").value||800);
+    let tax = parseFloat(document.getElementById("tax").value||6.5)/100;
 
-data.forEach(d=>{
- if(d.sell_price_min>0 && d.sell_price_min<market[d.city].sell) market[d.city].sell=d.sell_price_min;
- if(d.buy_price_max>market[d.city].buy) market[d.city].buy=d.buy_price_max;
-});
+    let cities = [...document.querySelectorAll("#cityFilter input:checked")]
+    .map(c=>c.value);
 
-// チャート
-drawPriceChart(market);
+    let server = document.getElementById("server").value;
 
-// 履歴
-await loadHistory(item,server,selected);
+    let url = `https://${server}.albion-online-data.com/api/v2/stats/prices/${item}?locations=${cities.join(",")}`;
 
+    let res = await fetch(url);
+    let data = await res.json();
+
+    let market = {};
+    cities.forEach(c=>market[c]={sell:999999999,buy:0});
+
+    data.forEach(d=>{
+        if(d.sell_price_min>0 && d.sell_price_min<market[d.city].sell){
+            market[d.city].sell = d.sell_price_min;
+        }
+        if(d.buy_price_max>market[d.city].buy){
+            market[d.city].buy = d.buy_price_max;
+        }
+    });
+
+    drawChart(market);
+    drawTable(market);
+    calculateTrades(market, weight, cargo, tax);
+
+    // 🔥 履歴読み込み
+    await loadHistory(item, server, cities);
+
+    document.getElementById("result").innerHTML = "AI分析完了";
 }
 
 // =========================
-// 現在価格
+// 現在価格チャート
 // =========================
-function drawPriceChart(market){
-let labels=[],profit=[];
+function drawChart(market){
+    let labels=[],buy=[],sell=[],profit=[];
 
-for(let c in market){
- let b=market[c].sell;
- let s=market[c].buy;
- labels.push(c);
- profit.push((b==999999999||s==0)?null:s-b);
+    for(let c in market){
+        labels.push(c);
+        let b = market[c].sell;
+        let s = market[c].buy;
+
+        buy.push(b===999999999 ? null : b);
+        sell.push(s===0 ? null : s);
+        profit.push((b===999999999 || s===0) ? null : s-b);
+    }
+
+    let ctx = document.getElementById("priceChart");
+
+    if(priceChart) priceChart.destroy();
+
+    priceChart = new Chart(ctx,{
+        data:{
+            labels: labels,
+            datasets:[
+                {type:"bar", label:"最安購入", data:buy, backgroundColor:"cyan"},
+                {type:"line", label:"最高売却", data:sell, borderColor:"orange"},
+                {type:"line", label:"利益", data:profit, borderColor:"lime"}
+            ]
+        }
+    });
 }
 
-if(priceChart) priceChart.destroy();
+// =========================
+// テーブル
+// =========================
+function drawTable(market){
+    let t = document.getElementById("priceTable");
+    t.innerHTML = "<tr><th>都市</th><th>買</th><th>売</th></tr>";
 
-priceChart=new Chart(document.getElementById("priceChart"),{
- type:"bar",
- data:{labels,datasets:[{label:"利益差",data:profit,backgroundColor:"lime"}]}
-});
+    for(let c in market){
+        let sellDisplay = market[c].sell === 999999999 ? "-" : market[c].sell;
+        let buyDisplay  = market[c].buy === 0 ? "-" : market[c].buy;
+
+        let cls = c==="Black Market" ? "class='bm'" : "";
+
+        t.innerHTML += `<tr ${cls}><td>${c}</td><td>${sellDisplay}</td><td>${buyDisplay}</td></tr>`;
+    }
 }
 
 // =========================
-// 履歴（プロ版）
+// トレード計算
 // =========================
-async function loadHistory(item,server,selected){
+function calculateTrades(market, weight, cargo, tax){
+    let trades = [];
 
-let res=await fetch(`https://${server}.albion-online-data.com/api/v2/stats/history/${item}?locations=${selected}&time-scale=1`);
-let data=await res.json();
+    for(let b in market){
+        for(let s in market){
+            if(b===s) continue;
 
-let datasets=[];
-let labels=[];
-let volume=[];
+            let buy = market[b].sell;
+            let sell = market[s].buy;
 
-// 都市ごと
-data.forEach(city=>{
- if(!city.data) return;
+            if(buy==999999999 || sell==0) continue;
 
- let prices=[];
- city.data.forEach((d,i)=>{
-  if(i==0) labels.push(new Date(d.timestamp).toLocaleString());
-  prices.push(d.avg_price);
-  volume.push(d.item_count);
- });
+            let profit = Math.floor(sell*(1-tax) - buy);
+            let cargoProfit = Math.floor((cargo/weight)*profit);
+            let roi = ((profit/buy)*100).toFixed(1);
 
- datasets.push({
-  label:city.location,
-  data:prices,
-  borderWidth:2,
-  tension:0.2
- });
-});
+            trades.push({b,s,profit,cargoProfit,roi});
+        }
+    }
 
-// =========================
-// MA
-// =========================
-function MA(arr,p){
- let r=[];
- for(let i=0;i<arr.length;i++){
-  if(i<p) r.push(null);
-  else{
-   let sum=0;
-   for(let j=i-p;j<i;j++) sum+=arr[j];
-   r.push(sum/p);
-  }
- }
- return r;
+    trades.sort((a,b)=>b.cargoProfit - a.cargoProfit);
+
+    let table = document.getElementById("tradeTable");
+    table.innerHTML="<tr><th>購入</th><th>販売</th><th>利益</th><th>総利益</th><th>ROI</th></tr>";
+
+    trades.slice(0,20).forEach(t=>{
+        let cls = t.s==="Black Market" ? "class='bm'" : "";
+
+        table.innerHTML += `
+        <tr ${cls}>
+            <td>${t.b}</td>
+            <td>${t.s}</td>
+            <td>${t.profit}</td>
+            <td style="color:gold">${t.cargoProfit}</td>
+            <td>${t.roi}%</td>
+        </tr>`;
+    });
+
+    if(trades.length){
+        let best = trades[0];
+        document.getElementById("bestTrade").innerHTML =
+        `🔥 BEST: ${best.b} → ${best.s} / 利益 ${best.cargoProfit}`;
+    }
 }
 
-// 平均ベース
-let base=data[0]?.data?.map(d=>d.avg_price)||[];
-
-let ma7=MA(base,7);
-let ma25=MA(base,25);
-
 // =========================
-// ボラティリティ
+// 🔥 履歴 + 平均価格 + MA
 // =========================
-let vol=0;
-for(let i=1;i<base.length;i++){
- vol+=Math.abs(base[i]-base[i-1]);
-}
-vol/=base.length;
+async function loadHistory(item, server, cities){
 
-let risk=vol/base[base.length-1];
+    let url = `https://${server}.albion-online-data.com/api/v2/stats/history/${item}?locations=${cities.join(",")}&time-scale=24`;
 
-let riskText = risk<0.05?"低リスク":risk<0.15?"中リスク":"高リスク";
+    let res = await fetch(url);
+    let data = await res.json();
 
-// =========================
-// AI判断
-// =========================
-let advice="";
+    if(!data.length){
+        alert("履歴データなし");
+        return;
+    }
 
-if(ma7.at(-1)>ma25.at(-1)){
- advice+="📈 上昇トレンド（買い有利）<br>";
-}else{
- advice+="📉 下落トレンド（注意）<br>";
-}
+    let map = {};
 
-if(volume.at(-1)>volume[volume.length-10]){
- advice+="🔥 出来高増加 → 本物の動き<br>";
-}
+    data.forEach(city=>{
+        if(!city.data) return;
 
-advice+=`⚠ リスク: ${riskText}`;
+        city.data.forEach(d=>{
+            let t = d.timestamp;
 
-document.getElementById("aiAdvice").innerHTML=advice;
+            if(!map[t]){
+                map[t] = {sum:0,count:0};
+            }
 
-// =========================
-// 描画
-// =========================
-datasets.push({label:"MA7",data:ma7,borderColor:"yellow"});
-datasets.push({label:"MA25",data:ma25,borderColor:"red"});
+            map[t].sum += d.avg_price;
+            map[t].count++;
+        });
+    });
 
-datasets.push({
- type:"bar",
- label:"出来高",
- data:volume,
- backgroundColor:"rgba(255,255,0,0.2)"
-});
+    let labels=[],avg=[];
 
-if(historyChart) historyChart.destroy();
+    Object.keys(map).sort().forEach(t=>{
+        labels.push(new Date(t).toLocaleDateString("ja-JP"));
+        avg.push(map[t].sum / map[t].count);
+    });
 
-historyChart=new Chart(document.getElementById("historyChart"),{
- data:{labels,datasets}
-});
+    // 移動平均
+    let ma=[];
+    let period=7;
 
+    for(let i=0;i<avg.length;i++){
+        if(i<period-1){
+            ma.push(null);
+        }else{
+            let sum=0;
+            for(let j=i-period+1;j<=i;j++) sum+=avg[j];
+            ma.push(sum/period);
+        }
+    }
+
+    let trend = avg[avg.length-1] - avg[0];
+    let text = trend>0 ? "📈 上昇トレンド（買い）" : "📉 下落トレンド（注意）";
+    document.getElementById("aiAdvice").innerHTML += "<br>"+text;
+
+    let ctx = document.getElementById("historyChart");
+
+    if(historyChart) historyChart.destroy();
+
+    historyChart = new Chart(ctx,{
+        type:"line",
+        data:{
+            labels: labels,
+            datasets:[
+                {label:"平均価格", data:avg, borderColor:"cyan", tension:0.2},
+                {label:"7日移動平均", data:ma, borderColor:"orange", borderDash:[5,5], tension:0.2}
+            ]
+        }
+    });
 }
 
 </script>
